@@ -6,7 +6,7 @@ from app.database.session import get_db
 from app.user import crud, schemas
 from app.core.auth.crud import verify_access_token, verify_refresh_token, create_access_token
 from app.core.auth.schemas import VerifyTokenRequest, RefreshTokenRequest, RefreshTokenResponse
-from app.user.schemas import UserCreateOAuth, UserOut, OAuthResponse, OAuthError
+from app.user.schemas import UserCreateOAuth, UserOut, OAuthResponse, OAuthError, UserResponse, UserUpdate
 from app.user.crud import get_or_create_oauth_user
 
 router = APIRouter()

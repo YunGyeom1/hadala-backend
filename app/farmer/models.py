@@ -8,7 +8,7 @@ class Farmer(Base):
     __tablename__ = "farmers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     farm_name = Column(String, nullable=False)
     farm_address = Column(String, nullable=False)
     farm_description = Column(Text)

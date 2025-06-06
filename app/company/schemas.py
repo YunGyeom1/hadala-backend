@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -17,9 +17,7 @@ class CompanyInDB(CompanyBase):
     owner: Optional[UUID4] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CompanyResponse(CompanyInDB):
     pass
@@ -33,14 +31,10 @@ class WholesalerInCompany(BaseModel):
     name: str
     role: Optional[str] = None
     phone: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CollectionCenterInCompany(BaseModel):
     id: UUID4
     name: str
     address: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

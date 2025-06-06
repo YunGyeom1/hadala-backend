@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from pydantic import ConfigDict
 
 class UserCreateOAuth(BaseModel):
     name: str
@@ -11,9 +12,7 @@ class UserOut(BaseModel):
     id: str
     name: str
     email: EmailStr
-    
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OAuthResponse(BaseModel):
     access_token: str
@@ -30,3 +29,15 @@ class RefreshTokenRequest(BaseModel):
 class RefreshTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class UserResponse(UserOut):
+    pass
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    name: str

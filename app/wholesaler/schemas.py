@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -20,9 +20,7 @@ class WholesalerInDB(WholesalerBase):
     company_id: Optional[UUID4] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WholesalerResponse(WholesalerInDB):
     pass

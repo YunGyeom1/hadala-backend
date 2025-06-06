@@ -18,7 +18,7 @@ from app.core.auth.crud import (
     verify_refresh_token,
     get_or_create_google_user
 )
-from app.db.session import get_db
+from app.database.session import get_db
 
 router = APIRouter()
 
