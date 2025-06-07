@@ -11,7 +11,10 @@ class Company(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, unique=True, nullable=False)
-    owner = Column(UUID(as_uuid=True), ForeignKey("wholesalers.id"), nullable=True)
+    owner = Column(
+    UUID(as_uuid=True),
+    ForeignKey("wholesalers.id", use_alter=True, name="fk_companies_wholesalers_owner"),
+    nullable=True)
     description = Column(String)
     business_number = Column(String(20), unique=True, nullable=False)
     address = Column(String(200), nullable=False)

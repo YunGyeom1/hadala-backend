@@ -1,10 +1,12 @@
 from pydantic import BaseModel, UUID4, ConfigDict
 from typing import Optional, List
 from datetime import datetime
+from uuid import UUID
 
 class CenterBase(BaseModel):
     name: str
     address: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class CenterCreate(CenterBase):
     company_id: UUID4
@@ -36,4 +38,10 @@ class WholesalerInCenter(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class CenterWithWholesalers(CenterResponse):
-    wholesalers: List[WholesalerInCenter] = [] 
+    wholesalers: List[WholesalerInCenter] = []
+
+class CenterOut(CenterBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True) 

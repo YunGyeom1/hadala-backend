@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
@@ -28,6 +28,7 @@ class InventoryBase(BaseModel):
     date: date
     company_id: UUID
     center_id: UUID
+    model_config = ConfigDict(from_attributes=True)
 
 class InventoryCreate(InventoryBase):
     items: List[InventoryItemCreate]
@@ -35,6 +36,7 @@ class InventoryCreate(InventoryBase):
 class InventoryUpdate(BaseModel):
     date: Optional[date] = None
     items: Optional[List[InventoryItemUpdate]] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class Inventory(InventoryBase):
     id: UUID
@@ -75,4 +77,10 @@ class DailySettlement(DailySettlementBase):
     updated_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class InventoryOut(InventoryBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True) 

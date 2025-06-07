@@ -1,20 +1,9 @@
-import sys
-import os
-from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
+
 from alembic import context
-
-# 프로젝트 app 경로 추가
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../app')))
-
-from app.database.base import Base
-from app.user.models import User
-from app.farmer.models import Farmer
-from app.company.models import Company
-from app.center.models import CollectionCenter, CollectionCenterWholesaler
-from app.wholesaler.models import Wholesaler
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -29,14 +18,13 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+target_metadata = None
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-config.set_main_option('sqlalchemy.url', os.environ['DATABASE_URL'])
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -55,7 +43,7 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        compare_type=True,
+        dialect_opts={"paramstyle": "named"},
     )
 
     with context.begin_transaction():
@@ -70,14 +58,14 @@ def run_migrations_online() -> None:
 
     """
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True
+            connection=connection, target_metadata=target_metadata
         )
 
         with context.begin_transaction():

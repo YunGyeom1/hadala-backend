@@ -1,6 +1,7 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import date, datetime
 from typing import List, Optional
+from uuid import UUID
 
 class WholesaleShipmentItemBase(BaseModel):
     crop_name: str
@@ -8,6 +9,7 @@ class WholesaleShipmentItemBase(BaseModel):
     unit_price: float
     total_price: float
     quality_grade: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class WholesaleShipmentItemCreate(WholesaleShipmentItemBase):
     pass
@@ -21,9 +23,6 @@ class WholesaleShipmentItem(WholesaleShipmentItemBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 class WholesaleShipmentBase(BaseModel):
     contract_id: UUID4
     farmer_id: UUID4
@@ -31,6 +30,7 @@ class WholesaleShipmentBase(BaseModel):
     wholesaler_id: UUID4
     shipment_date: date
     total_price: Optional[float] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class WholesaleShipmentCreate(WholesaleShipmentBase):
     items: List[WholesaleShipmentItemCreate]
@@ -38,6 +38,7 @@ class WholesaleShipmentCreate(WholesaleShipmentBase):
 class WholesaleShipmentUpdate(BaseModel):
     shipment_date: Optional[date] = None
     total_price: Optional[float] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class WholesaleShipment(WholesaleShipmentBase):
     id: UUID4
@@ -46,9 +47,6 @@ class WholesaleShipment(WholesaleShipmentBase):
     created_at: datetime
     updated_at: datetime
     items: List[WholesaleShipmentItem]
-
-    class Config:
-        from_attributes = True
 
 class ShipmentProgressItem(BaseModel):
     crop_name: str
@@ -62,4 +60,10 @@ class ContractShipmentProgress(BaseModel):
     contract_id: UUID4
     items: List[ShipmentProgressItem]
     total_shipped_amount: float
-    total_remaining_amount: float 
+    total_remaining_amount: float
+
+class WholesaleShipmentOut(WholesaleShipmentBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True) 

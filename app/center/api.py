@@ -5,7 +5,7 @@ from typing import List
 
 from app.database.session import get_db
 from app.center import crud, schemas
-from app.core.auth.dependencies import verify_access_token
+from app.core.auth.utils import verify_access_token
 from app.core.auth.schemas import VerifyTokenRequest
 from app.company.crud import get_company
 

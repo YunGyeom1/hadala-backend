@@ -3,7 +3,6 @@ from sqlalchemy import and_, desc
 from typing import List, Optional
 from uuid import UUID
 from . import models, schemas
-from app.core.auth.dependencies import get_current_user
 
 def create_contract(db: Session, contract: schemas.WholesaleContractCreate, company_id: UUID):
     """새 계약 생성"""

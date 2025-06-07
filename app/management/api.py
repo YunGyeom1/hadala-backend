@@ -5,8 +5,7 @@ from datetime import date
 from uuid import UUID
 
 from app.database.session import get_db
-from app.core.auth.dependencies import get_current_user
-from app.core.auth.utils import verify_company_affiliation
+from app.core.auth.utils import get_current_user
 from app.user.models import User
 from . import crud, schemas
 
@@ -21,7 +20,7 @@ def calculate_settlement(
     current_user  = Depends(get_current_user)
 ):
     """특정 일자의 정산 정보를 계산합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     settlement = crud.calculate_daily_settlement(db, company_id, center_id, target_date)
     if not settlement:
         raise HTTPException(status_code=404, detail="Failed to calculate settlement")
@@ -38,7 +37,7 @@ def get_settlements(
     current_user  = Depends(get_current_user)
 ):
     """일일 정산 정보 목록을 조회합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return crud.get_daily_settlements(
         db,
         company_id,
@@ -56,7 +55,7 @@ def get_settlement(
     current_user  = Depends(get_current_user)
 ):
     """특정 일일 정산 정보를 조회합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     settlement = crud.get_daily_settlement(db, settlement_id)
     if not settlement or settlement.company_id != company_id:
         raise HTTPException(status_code=404, detail="Settlement not found")
@@ -70,7 +69,7 @@ def update_settlement(
     current_user  = Depends(get_current_user)
 ):
     """일일 정산 정보를 업데이트합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     settlement = crud.get_daily_settlement(db, settlement_id)
     if not settlement or settlement.company_id != company_id:
         raise HTTPException(status_code=404, detail="Settlement not found")
@@ -88,7 +87,7 @@ def calculate_accounting(
     current_user  = Depends(get_current_user)
 ):
     """특정 일자의 회계 정보를 계산합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     accounting = crud.calculate_daily_accounting(db, company_id, target_date)
     if not accounting:
         raise HTTPException(status_code=404, detail="Failed to calculate accounting")
@@ -104,7 +103,7 @@ def get_accountings(
     current_user  = Depends(get_current_user)
 ):
     """일일 회계 정보 목록을 조회합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return crud.get_daily_accountings(
         db,
         company_id,
@@ -121,7 +120,7 @@ def get_accounting(
     current_user  = Depends(get_current_user)
 ):
     """특정 일일 회계 정보를 조회합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     accounting = crud.get_daily_accounting(db, accounting_id)
     if not accounting or accounting.company_id != company_id:
         raise HTTPException(status_code=404, detail="Accounting not found")
@@ -135,7 +134,7 @@ def update_accounting(
     current_user  = Depends(get_current_user)
 ):
     """일일 회계 정보를 업데이트합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     accounting = crud.get_daily_accounting(db, accounting_id)
     if not accounting or accounting.company_id != company_id:
         raise HTTPException(status_code=404, detail="Accounting not found")

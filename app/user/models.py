@@ -12,9 +12,9 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     picture_url = Column(String)
-    oauth_provider = Column(String, nullable=True)  # Google, Kakao 등
-    oauth_sub = Column(String, nullable=False, index=True)  # Google OAuth sub
-
+    oauth_provider = Column(String, nullable=True)
+    oauth_sub = Column(String, nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

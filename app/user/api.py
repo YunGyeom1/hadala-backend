@@ -1,103 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from uuid import UUID
 
 from app.database.session import get_db
 from app.user import crud, schemas
-from app.core.auth.utils import verify_access_token, verify_refresh_token, create_access_token
-from app.core.auth.schemas import VerifyTokenRequest, RefreshTokenRequest, RefreshTokenResponse
-from app.user.schemas import UserCreateOAuth, UserOut, OAuthResponse, OAuthError, UserResponse, UserUpdate
-from app.user.crud import get_or_create_oauth_user
+from app.core.auth.utils import get_current_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/me", response_model=schemas.UserResponse)
-def get_my_info(
-    token: VerifyTokenRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    현재 로그인한 사용자의 정보를 조회합니다.
-    """
-    # 토큰 검증 및 사용자 ID 추출
-    token_data = verify_access_token(token.access_token)
-    user_id = UUID(token_data.sub)
-    
-    # 사용자 정보 조회
-    user = crud.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다"
-        )
-    return schemas.UserResponse.model_validate(user)
+def get_my_info(current_user = Depends(get_current_user)):
+    return schemas.UserResponse.model_validate(current_user)
+
 
 @router.put("/me", response_model=schemas.UserResponse)
 def update_my_info(
-    user_update: schemas.UserUpdate,
-    token: VerifyTokenRequest,
+    update_data: schemas.UserUpdate,
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    현재 로그인한 사용자의 정보를 수정합니다.
-    """
-    # 토큰 검증 및 사용자 ID 추출
-    token_data = verify_access_token(token.access_token)
-    user_id = UUID(token_data.sub)
-    
-    # 사용자 정보 조회
-    user = crud.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다"
-        )
-    # 정보 업데이트
-    update_data = user_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(user, field, value)
-    db.commit()
-    db.refresh(user)
-    return schemas.UserResponse.model_validate(user)
-
-@router.post("/oauth-login", response_model=OAuthResponse, responses={400: {"model": OAuthError}})
-async def oauth_login(user_info: UserCreateOAuth, db: Session = Depends(get_db)):
-    try:
-        user, token_pair = get_or_create_oauth_user(db, user_info)
-        if not token_pair or not token_pair.access_token or not token_pair.refresh_token:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="토큰 생성 중 오류가 발생했습니다."
-            )
-        return OAuthResponse(
-            access_token=token_pair.access_token,
-            refresh_token=token_pair.refresh_token,
-            user=UserOut.model_validate(user)
-        )
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"OAuth 로그인 처리 중 오류가 발생했습니다: {str(e)}"
-        )
-
-@router.post("/refresh", response_model=RefreshTokenResponse, responses={401: {"model": OAuthError}})
-async def refresh_token(request: RefreshTokenRequest):
-    try:
-        # Refresh Token 검증
-        token_data = verify_refresh_token(request.refresh_token)
-        
-        # 새로운 Access Token 생성
-        access_token = create_access_token(data={"sub": token_data.sub})
-        
-        return RefreshTokenResponse(
-            access_token=access_token
-        )
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="토큰 갱신 중 오류가 발생했습니다."
-        )
+    return crud.update_user(db=db, user_id=current_user.id, update_data=update_data)

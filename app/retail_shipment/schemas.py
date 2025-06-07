@@ -1,6 +1,7 @@
 from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import date, datetime
 from typing import List, Optional
+from uuid import UUID
 
 class RetailShipmentItemBase(BaseModel):
     crop_name: str
@@ -29,6 +30,9 @@ class RetailShipmentBase(BaseModel):
     wholesaler_id: Optional[UUID4] = None
     shipment_date: date
     total_price: Optional[float] = None
+    shipment_name: str
+    quantity: int
+    model_config = ConfigDict(from_attributes=True)
 
 class RetailShipmentCreate(RetailShipmentBase):
     items: List[RetailShipmentItemCreate]
@@ -37,6 +41,9 @@ class RetailShipmentUpdate(BaseModel):
     shipment_date: Optional[date] = None
     wholesaler_id: Optional[UUID4] = None
     total_price: Optional[float] = None
+    shipment_name: Optional[str] = None
+    quantity: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class RetailShipment(RetailShipmentBase):
     id: UUID4
@@ -53,4 +60,10 @@ class ShipmentProgress(BaseModel):
     shipped_quantity: float
     remaining_quantity: float
     unit_price: float
-    total_price: float 
+    total_price: float
+
+class RetailShipmentOut(RetailShipmentBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True) 

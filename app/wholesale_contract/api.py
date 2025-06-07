@@ -3,13 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 from app.database.session import get_db
-from app.core.auth.dependencies import get_current_user
-from app.core.auth.utils import get_company_member_dependency, get_company_role_dependency, get_current_user_company_id, verify_company_affiliation
+from app.core.auth.utils import get_current_user
 from app.user.models import User
 from . import crud, schemas, models
 from .models import ContractStatus, PaymentStatus
 
-router = APIRouter(prefix="/wholesale-contracts", tags=["wholesale-contracts"])
+router = APIRouter(prefix="/wholesale-contracts", tags=["wholesale-contracts"])  
 
 @router.post("/", response_model=schemas.WholesaleContract)
 def create_contract(
@@ -18,7 +17,7 @@ def create_contract(
     current_user  = Depends(get_current_user)
 ):
     """새 계약 생성"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return schemas.WholesaleContract.model_validate(crud.create_contract(db, contract, company_id))
 
 @router.get("/", response_model=List[schemas.WholesaleContract])
@@ -33,7 +32,7 @@ def get_contracts(
     current_user  = Depends(get_current_user)
 ):
     """계약 목록 조회"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return [schemas.WholesaleContract.model_validate(c) for c in crud.get_contracts(
         db,
         company_id,
@@ -52,7 +51,7 @@ def get_contract(
     current_user  = Depends(get_current_user)
 ):
     """특정 계약 조회"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     contract = crud.get_contract(db, contract_id, company_id)
     if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -91,7 +90,7 @@ def delete_contract(
     current_user  = Depends(get_current_user)
 ):
     """계약 삭제"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     if not crud.delete_contract(db, contract_id, company_id):
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없거나 삭제할 수 없는 상태입니다.")
     return {"message": "계약이 삭제되었습니다."}
@@ -100,11 +99,10 @@ def delete_contract(
 def confirm_contract(
     contract_id: UUID,
     db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user),
-    _: None = Depends(get_company_role_dependency(["owner", "manager"]))
+    current_user  = Depends(get_current_user)
 ):
     """계약 확정"""
-    company_id = get_current_user_company_id(current_user, db)
+    company_id = current_user.wholesale.company_id
     contract = crud.update_contract_status(db, contract_id, models.ContractStatus.CONFIRMED, company_id)
     if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -114,11 +112,10 @@ def confirm_contract(
 def complete_contract(
     contract_id: UUID,
     db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user),
-    _: None = Depends(get_company_role_dependency(["owner", "manager"]))
+    current_user  = Depends(get_current_user)
 ):
     """계약 완료"""
-    company_id = get_current_user_company_id(current_user, db)
+    company_id = current_user.wholesale.company_id
     contract = crud.update_contract_status(db, contract_id, models.ContractStatus.COMPLETED, company_id)
     if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -128,11 +125,10 @@ def complete_contract(
 def cancel_contract(
     contract_id: UUID,
     db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user),
-    _: None = Depends(get_company_role_dependency(["owner", "manager"]))
+    current_user  = Depends(get_current_user)
 ):
     """계약 취소"""
-    company_id = get_current_user_company_id(current_user, db)
+    company_id = current_user.wholesale.company_id
     contract = crud.update_contract_status(db, contract_id, models.ContractStatus.CANCELLED, company_id)
     if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -145,7 +141,7 @@ def get_contract_items(
     current_user  = Depends(get_current_user)
 ):
     """계약 품목 목록 조회"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     items = crud.get_contract_items(db, contract_id, company_id)
     if not items:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -159,7 +155,7 @@ def update_contract_item(
     current_user  = Depends(get_current_user)
 ):
     """계약 품목 수정"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     updated_item = crud.update_contract_item(db, item_id, item, company_id)
     if not updated_item:
         raise HTTPException(status_code=404, detail="품목을 찾을 수 없거나 수정할 수 없는 상태입니다.")
@@ -172,7 +168,7 @@ def delete_contract_item(
     current_user  = Depends(get_current_user)
 ):
     """계약 품목 삭제"""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     if not crud.delete_contract_item(db, item_id, company_id):
         raise HTTPException(status_code=404, detail="품목을 찾을 수 없거나 삭제할 수 없는 상태입니다.")
     return {"message": "품목이 삭제되었습니다."}
@@ -186,7 +182,7 @@ def get_contract_payment_logs(
     current_user  = Depends(get_current_user)
 ):
     """계약의 결제 상태 변경 로그를 조회합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     logs = crud.get_contract_payment_logs(db, contract_id, company_id, skip, limit)
     if not logs:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -199,7 +195,7 @@ def get_payment_log(
     current_user  = Depends(get_current_user)
 ):
     """특정 결제 상태 변경 로그를 조회합니다."""
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     log = crud.get_payment_log(db, log_id, company_id)
     if not log:
         raise HTTPException(status_code=404, detail="결제 로그를 찾을 수 없습니다.")

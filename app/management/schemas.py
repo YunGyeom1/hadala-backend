@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
@@ -15,6 +15,7 @@ class DailySettlementBase(BaseModel):
     discrepancy_out_kg: Optional[float] = None
     total_in_kg: Optional[float] = None
     total_out_kg: Optional[float] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class DailySettlementCreate(DailySettlementBase):
     pass
@@ -28,14 +29,13 @@ class DailySettlementUpdate(BaseModel):
     discrepancy_out_kg: Optional[float] = None
     total_in_kg: Optional[float] = None
     total_out_kg: Optional[float] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class DailySettlement(DailySettlementBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DailyAccountingBase(BaseModel):
     date: date
@@ -46,6 +46,7 @@ class DailyAccountingBase(BaseModel):
     total_received: float = 0
     total_pending_payment: float = 0
     total_pending_receipt: float = 0
+    model_config = ConfigDict(from_attributes=True)
 
 class DailyAccountingCreate(DailyAccountingBase):
     pass
@@ -57,11 +58,29 @@ class DailyAccountingUpdate(BaseModel):
     total_received: Optional[float] = None
     total_pending_payment: Optional[float] = None
     total_pending_receipt: Optional[float] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class DailyAccounting(DailyAccountingBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True 
+class ManagementBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class ManagementCreate(ManagementBase):
+    pass
+
+class ManagementUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class ManagementOut(ManagementBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True) 

@@ -1,32 +1,32 @@
-from pydantic import BaseModel, UUID4, ConfigDict
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
 
 class WholesalerBase(BaseModel):
     name: str
-    role: Optional[str] = None
-    phone: Optional[str] = None
+    address: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class WholesalerCreate(WholesalerBase):
-    user_id: UUID4
-    company_id: UUID4
+    pass
 
-class WholesalerUpdate(WholesalerBase):
+class WholesalerUpdate(BaseModel):
     name: Optional[str] = None
+    address: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
-class WholesalerInDB(WholesalerBase):
-    id: UUID4
-    user_id: UUID4
-    company_id: Optional[UUID4] = None
+class WholesalerOut(WholesalerBase):
+    id: UUID
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
-class WholesalerResponse(WholesalerInDB):
+class WholesalerResponse(WholesalerOut):
     pass
 
 class WholesalerRoleUpdate(BaseModel):
     role: str
 
 class WholesalerOwnerUpdate(BaseModel):
-    new_owner_id: UUID4
+    new_owner_id: UUID

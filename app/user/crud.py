@@ -4,6 +4,7 @@ from uuid import UUID
 from app.user.models import User
 from app.core.auth.schemas import GoogleUserInfo, TokenPair
 from app.core.auth.utils import create_access_token, create_refresh_token
+from app.user.schemas import UserCreateOAuth, UserUpdate
 
 def get_user_by_id(db: Session, user_id: UUID) -> Optional[User]:
     """
@@ -82,12 +83,18 @@ def get_or_create_user(
 
 def get_or_create_oauth_user(
     db: Session,
-    user_info: GoogleUserInfo
+    user_info: UserCreateOAuth
 ) -> Tuple[User, TokenPair]:
     """
     OAuth 회원가입/로그인용 유틸리티 함수 (테스트 및 API 호환)
     """
-    user = get_or_create_user(db=db, user_info=user_info)
+    google_user_info = GoogleUserInfo(
+        email=user_info.email,
+        name=user_info.name,
+        sub=user_info.oauth_sub,
+        picture=user_info.picture_url
+    )
+    user = get_or_create_user(db=db, user_info=google_user_info)
     
     # 실제 토큰 생성
     access_token = create_access_token(data={"sub": str(user.id)})
@@ -97,4 +104,14 @@ def get_or_create_oauth_user(
         access_token=access_token,
         refresh_token=refresh_token
     )
-    return user, token_pair 
+    return user, token_pair
+
+def update_user(db: Session, user_id: int, update_data: UserUpdate) -> User:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    for field, value in update_data.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return user 

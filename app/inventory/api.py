@@ -4,11 +4,10 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date
 
-from app.core.auth.dependencies import get_current_user
+from app.core.auth.utils import get_current_user
 from app.database.session import get_db
 from app.inventory import crud, schemas
 from app.user.models import User
-from app.core.auth.dependencies import verify_company_affiliation
 
 router = APIRouter()
 
@@ -18,7 +17,7 @@ def create_inventory_snapshot(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return crud.create_inventory(db, inventory, company_id)
 
 @router.get("/snapshots", response_model=List[schemas.Inventory])
@@ -32,7 +31,7 @@ def get_inventory_snapshots(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     filters = schemas.InventoryFilter(
         center_id=center_id,
         date=date,
@@ -47,7 +46,7 @@ def get_inventory_snapshot(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     inventory = crud.get_inventory(db, snapshot_id, company_id)
     if not inventory:
         raise HTTPException(status_code=404, detail="Inventory snapshot not found")
@@ -59,7 +58,7 @@ def get_inventory_items(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return crud.get_inventory_items(db, snapshot_id, company_id)
 
 @router.post("/snapshots/{snapshot_id}/items", response_model=schemas.InventoryItem)
@@ -69,7 +68,7 @@ def add_inventory_item(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     db_item = crud.add_inventory_item(db, snapshot_id, company_id, item)
     if not db_item:
         raise HTTPException(status_code=404, detail="Inventory snapshot not found")
@@ -82,7 +81,7 @@ def update_inventory_item(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     item = crud.update_inventory_item(db, item_id, company_id, item_update)
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
@@ -94,7 +93,7 @@ def delete_inventory_item(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     if not crud.delete_inventory_item(db, item_id, company_id):
         raise HTTPException(status_code=404, detail="Inventory item not found")
     return {"message": "Inventory item deleted successfully"}
@@ -104,7 +103,7 @@ def get_company_inventories(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return crud.get_inventories(db, company_id)
 
 @router.get("/my-company/inventories/{date}", response_model=List[schemas.Inventory])
@@ -113,7 +112,7 @@ def get_company_inventories_by_date(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    company_id = verify_company_affiliation(current_user)
+    company_id = current_user.wholesaler.company_id
     return crud.get_company_inventories_by_date(db, company_id, date)
 
 @router.post("/settlements/today", response_model=schemas.DailySettlement)
