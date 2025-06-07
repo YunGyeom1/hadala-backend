@@ -19,3 +19,7 @@ class Company(Base):
     # 관계
     centers = relationship("CollectionCenter", back_populates="company")
     wholesalers = relationship("Wholesaler", back_populates="company", foreign_keys="Wholesaler.company_id")
+    contracts = relationship("WholesaleContract", back_populates="company")
+    shipments = relationship("WholesaleShipment", back_populates="company")
+    retail_contracts = relationship("RetailContract", back_populates="company")
+    retail_shipments = relationship("RetailShipment", back_populates="company")

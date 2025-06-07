@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.env
+.env.*
+
+# SQLite or local DB
+*.db
+
+# Logs
+*.log
+
+# Alembic cache
+alembic/versions/__pycache__/

@@ -19,6 +19,9 @@ class CollectionCenter(Base):
         secondary="collection_center_wholesaler",
         back_populates="collection_centers"
     )
+    contracts = relationship("WholesaleContract", back_populates="center")
+    shipments = relationship("WholesaleShipment", back_populates="center")
+    retail_contracts = relationship("RetailContract", back_populates="center")
 
 class CollectionCenterWholesaler(Base):
     __tablename__ = "collection_center_wholesaler"

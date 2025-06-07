@@ -26,3 +26,6 @@ class Wholesaler(Base):
         secondary="collection_center_wholesaler",
         back_populates="wholesalers"
     )
+    contracts = relationship("WholesaleContract", back_populates="wholesaler")
+    shipments = relationship("WholesaleShipment", back_populates="wholesaler")
+    retail_contracts = relationship("RetailContract", back_populates="wholesaler")

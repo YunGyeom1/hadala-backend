@@ -21,3 +21,5 @@ class Farmer(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     user = relationship("User", back_populates="farmer")
+    contracts = relationship("WholesaleContract", back_populates="farmer")
+    shipments = relationship("WholesaleShipment", back_populates="farmer")
