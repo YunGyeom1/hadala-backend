@@ -12,7 +12,7 @@ center_wholesaler = Table(
     Column("wholesaler_id", String(36), ForeignKey("wholesalers.id"), primary_key=True)
 )
 
-class CollectionCenter(Base):
+class Center(Base):
     __tablename__ = "collection_centers"
 
     id = Column(UUID, primary_key=True, index=True)
@@ -32,7 +32,7 @@ class CollectionCenter(Base):
     inventories = relationship("CompanyCropInventory", back_populates="center")
     daily_settlements = relationship("DailySettlement", back_populates="center")
 
-class CollectionCenterWholesaler(Base):
+class CenterWholesaler(Base):
     __tablename__ = "collection_center_wholesaler"
     collection_center_id = Column(UUID, ForeignKey("collection_centers.id"), primary_key=True)
     wholesaler_id = Column(UUID, ForeignKey("wholesalers.id"), primary_key=True)

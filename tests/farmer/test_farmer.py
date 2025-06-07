@@ -1,10 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 from uuid import uuid4
+
 from app.user.models import User
 from app.farmer.models import Farmer
 from app.core.auth.utils import create_access_token
-
 
 
 @pytest.fixture
@@ -18,15 +19,21 @@ def farmer_payload():
     }
 
 
-def test_create_farmer(client: TestClient, test_user: User, auth_headers: dict, db, farmer_payload):
+@pytest.fixture
+def auth_headers(test_user: User):
+    access_token = create_access_token({"sub": str(test_user.id)})
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+def test_create_farmer(client: TestClient, test_user: User, auth_headers: dict, db: Session, farmer_payload: dict):
     response = client.post("/farmers/", json=farmer_payload, headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == farmer_payload["name"]
     assert data["address"] == farmer_payload["address"]
+    assert data["user_id"] == str(test_user.id)
     assert "id" in data
     assert "created_at" in data
-    assert data["user_id"] == str(test_user.id)
 
 
 def test_get_farmer(client: TestClient, test_farmer: Farmer, auth_headers: dict):
@@ -37,7 +44,7 @@ def test_get_farmer(client: TestClient, test_farmer: Farmer, auth_headers: dict)
     assert data["name"] == test_farmer.name
 
 
-def test_update_farmer(client: TestClient, test_farmer: Farmer, test_user: User, auth_headers: dict):
+def test_update_farmer(client: TestClient, test_farmer: Farmer, auth_headers: dict):
     update_payload = {
         "name": "변경된 이름",
         "address": "강원도 홍천군"
@@ -53,8 +60,7 @@ def test_update_farmer(client: TestClient, test_farmer: Farmer, test_user: User,
     assert data["address"] == update_payload["address"]
 
 
-def test_unauthorized_update_farmer(client: TestClient, test_farmer: Farmer, db):
-    # 다른 유저 생성
+def test_unauthorized_update_farmer(client: TestClient, test_farmer: Farmer, db: Session):
     attacker = User(
         email="hacker@example.com",
         name="hacker",
@@ -81,4 +87,4 @@ def test_filter_farmers(client: TestClient, test_farmer: Farmer):
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert any("경기도" in farmer["address"] for farmer in data if farmer["address"])
+    assert any("경기도" in farmer["address"] for farmer in data if "address" in farmer)

@@ -47,7 +47,7 @@ class WholesaleContract(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
-    center = relationship("CollectionCenter", back_populates="contracts")
+    center = relationship("Center", back_populates="contracts")
     wholesaler = relationship("Wholesaler", back_populates="contracts")
     farmer = relationship("Farmer", back_populates="contracts")
     company = relationship("Company", back_populates="contracts")

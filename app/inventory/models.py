@@ -17,7 +17,7 @@ class CompanyCropInventory(Base):
 
     # Relationships
     company = relationship("Company", back_populates="inventories")
-    center = relationship("CollectionCenter", back_populates="inventories")
+    center = relationship("Center", back_populates="inventories")
     items = relationship("CompanyCropInventoryItem", back_populates="inventory", cascade="all, delete-orphan")
 
 class CompanyCropInventoryItem(Base):

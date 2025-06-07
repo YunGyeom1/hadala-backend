@@ -35,7 +35,7 @@ class DailySettlement(Base):
 
     # Relationships
     company = relationship("Company", back_populates="daily_settlements")
-    center = relationship("CollectionCenter", back_populates="daily_settlements")
+    center = relationship("Center", back_populates="daily_settlements")
 
 class DailyAccounting(Base):
     __tablename__ = "daily_accounting"

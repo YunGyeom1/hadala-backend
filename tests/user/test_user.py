@@ -1,6 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.user.models import User
+from app.core.auth.utils import create_access_token
+
+@pytest.fixture
+def auth_headers(test_user: User):
+    access_token = create_access_token({"sub": str(test_user.id)})
+    return {"Authorization": f"Bearer {access_token}"}
+
+
 
 def test_get_my_info(client: TestClient, test_user: User, auth_headers: dict):
     response = client.get("/users/me", headers=auth_headers)

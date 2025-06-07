@@ -25,7 +25,7 @@ class WholesaleShipment(Base):
     contract = relationship("WholesaleContract", back_populates="shipments")
     farmer = relationship("Farmer", back_populates="shipments")
     company = relationship("Company", back_populates="shipments")
-    center = relationship("CollectionCenter", back_populates="shipments")
+    center = relationship("Center", back_populates="shipments")
     wholesaler = relationship("Wholesaler", back_populates="shipments")
     items = relationship("WholesaleShipmentItem", back_populates="shipment", cascade="all, delete-orphan")
 

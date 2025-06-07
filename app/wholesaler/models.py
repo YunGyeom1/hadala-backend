@@ -22,7 +22,7 @@ class Wholesaler(Base):
     user = relationship("User", back_populates="wholesaler")
     company = relationship("Company", back_populates="wholesalers", foreign_keys=[company_id])
     centers = relationship(
-        "CollectionCenter",
+        "Center",
         secondary="center_wholesaler",
         back_populates="wholesalers"
     )

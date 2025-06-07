@@ -49,7 +49,7 @@ class RetailContract(Base):
     # 관계
     retailer = relationship("Retailer", back_populates="retail_contracts")
     company = relationship("Company", back_populates="retail_contracts")
-    center = relationship("CollectionCenter", back_populates="retail_contracts")
+    center = relationship("Center", back_populates="retail_contracts")
     wholesaler = relationship("Wholesaler", back_populates="retail_contracts")
     items = relationship("RetailContractItem", back_populates="contract", cascade="all, delete-orphan")
     shipments = relationship("RetailShipment", back_populates="contract")

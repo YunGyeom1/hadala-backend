@@ -1,49 +1,54 @@
-from pydantic import BaseModel, UUID4, ConfigDict
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
+from pydantic import BaseModel, EmailStr
+
 
 class CompanyBase(BaseModel):
     name: str
     description: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True)
+    business_number: str
+    address: str
+    phone: str
+    email: EmailStr
+
 
 class CompanyCreate(CompanyBase):
     pass
 
-class CompanyUpdate(CompanyBase):
+
+class CompanyUpdate(BaseModel):
     name: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True)
-
-class CompanyInDB(CompanyBase):
-    id: UUID4
-    owner: Optional[UUID4] = None
-    created_at: datetime
-    updated_at: datetime
-    model_config = ConfigDict(from_attributes=True)
-
-class CompanyResponse(CompanyInDB):
-    pass
-
-class CompanyFilter(BaseModel):
-    name: Optional[str] = None
-    has_owner: Optional[bool] = None
-
-class WholesalerInCompany(BaseModel):
-    id: UUID4
-    name: str
-    role: Optional[str] = None
-    phone: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True)
-
-class CollectionCenterInCompany(BaseModel):
-    id: UUID4
-    name: str
+    description: Optional[str] = None
     address: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True)
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
 
 class CompanyOut(CompanyBase):
     id: UUID
+    owner: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
-    model_config = ConfigDict(from_attributes=True)
+
+    class Config:
+        from_attributes = True
+
+
+class CompanyList(BaseModel):
+    items: List[CompanyOut]
+    total: int
+    skip: int
+    limit: int
+
+
+class WholesalerOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    role: str
+    company_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True 

@@ -4,7 +4,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database.base import Base
 import uuid
-from datetime import datetime
 
 class Company(Base):
     __tablename__ = "companies"
@@ -25,7 +24,7 @@ class Company(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # 관계
-    centers = relationship("CollectionCenter", back_populates="company")
+    centers = relationship("Center", back_populates="company")
     wholesalers = relationship("Wholesaler", back_populates="company", foreign_keys="Wholesaler.company_id")
     contracts = relationship("WholesaleContract", back_populates="company")
     shipments = relationship("WholesaleShipment", back_populates="company")

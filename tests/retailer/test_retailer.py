@@ -15,6 +15,12 @@ def retailer_payload():
     }
 
 
+@pytest.fixture
+def auth_headers(test_user: User):
+    access_token = create_access_token({"sub": str(test_user.id)})
+    return {"Authorization": f"Bearer {access_token}"}
+
+
 def test_create_retailer(client: TestClient, test_user: User, auth_headers: dict, db, retailer_payload):
     response = client.post("/retailers/", json=retailer_payload, headers=auth_headers)
     assert response.status_code == 200
