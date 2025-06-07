@@ -1,6 +1,16 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, UUID, func
+from sqlalchemy import Column, String, DateTime, ForeignKey, UUID, func, Table
 from sqlalchemy.orm import relationship
+from uuid import uuid4
+from datetime import datetime
 from app.database.base import Base
+
+# Association table for many-to-many relationship between centers and wholesalers
+center_wholesaler = Table(
+    "center_wholesaler",
+    Base.metadata,
+    Column("center_id", String(36), ForeignKey("centers.id"), primary_key=True),
+    Column("wholesaler_id", String(36), ForeignKey("wholesalers.id"), primary_key=True)
+)
 
 class CollectionCenter(Base):
     __tablename__ = "collection_centers"
@@ -14,14 +24,12 @@ class CollectionCenter(Base):
 
     # Relationships
     company = relationship("Company", back_populates="centers")
-    wholesalers = relationship(
-        "Wholesaler",
-        secondary="collection_center_wholesaler",
-        back_populates="collection_centers"
-    )
+    wholesalers = relationship("Wholesaler", secondary=center_wholesaler, back_populates="centers")
     contracts = relationship("WholesaleContract", back_populates="center")
     shipments = relationship("WholesaleShipment", back_populates="center")
     retail_contracts = relationship("RetailContract", back_populates="center")
+    inventories = relationship("CompanyCropInventory", back_populates="center")
+    daily_settlements = relationship("DailySettlement", back_populates="center")
 
 class CollectionCenterWholesaler(Base):
     __tablename__ = "collection_center_wholesaler"

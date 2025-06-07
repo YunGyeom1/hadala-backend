@@ -5,21 +5,24 @@ from .models import ContractStatus, PaymentStatus
 
 class WholesaleContractItemBase(BaseModel):
     crop_name: str
-    min_quantity_kg: Optional[float] = None
-    max_quantity_kg: Optional[float] = None
-    expected_quantity_kg: Optional[float] = None
+    quantity_kg: float
     unit_price: float
-    quality_expected: Optional[str] = None
+    quality_required: Optional[str] = None
 
 class WholesaleContractItemCreate(WholesaleContractItemBase):
     pass
 
-class WholesaleContractItemUpdate(WholesaleContractItemBase):
-    pass
+class WholesaleContractItemUpdate(BaseModel):
+    crop_name: Optional[str] = None
+    quantity_kg: Optional[float] = None
+    unit_price: Optional[float] = None
+    quality_required: Optional[str] = None
 
 class WholesaleContractItem(WholesaleContractItemBase):
     id: UUID4
     contract_id: UUID4
+    total_price: float
+    created_at: datetime
 
     class Config:
         from_attributes = True

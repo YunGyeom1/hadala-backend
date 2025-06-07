@@ -65,12 +65,32 @@ def update_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """계약 수정"""
-    company_id = verify_company_affiliation(current_user)
-    contract = crud.update_contract(db, contract_id, company_id, contract_update)
+    """계약 정보를 업데이트합니다."""
+    # 기존 계약 조회
+    contract = crud.get_contract(db, contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="계약을 찾을 수 없거나 수정할 수 없는 상태입니다.")
-    return contract
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # 권한 확인
+    if contract.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this contract")
+    
+    # 결제 상태가 변경되는 경우 로그 생성
+    if contract_update.payment_status and contract_update.payment_status != contract.payment_status:
+        crud.create_payment_log(
+            db=db,
+            contract_id=contract_id,
+            old_status=contract.payment_status,
+            new_status=contract_update.payment_status,
+            changed_by=current_user.id
+        )
+    
+    # 계약 업데이트
+    updated_contract = crud.update_contract(db, contract_id, contract_update)
+    if not updated_contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    return updated_contract
 
 @router.delete("/{contract_id}")
 def delete_contract(
@@ -122,21 +142,6 @@ def cancel_contract(
     """계약 취소"""
     company_id = get_current_user_company_id(current_user, db)
     contract = crud.update_contract_status(db, contract_id, models.ContractStatus.CANCELLED, company_id)
-    if not contract:
-        raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
-    return contract
-
-@router.post("/{contract_id}/set-payment-status", response_model=schemas.WholesaleContract)
-def set_payment_status(
-    contract_id: UUID,
-    status_update: schemas.PaymentStatusUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(get_company_role_dependency(["owner", "manager"]))
-):
-    """결제 상태 변경"""
-    company_id = get_current_user_company_id(current_user, db)
-    contract = crud.update_payment_status(db, contract_id, status_update.payment_status, company_id)
     if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
     return contract
@@ -195,4 +200,41 @@ def get_related_shipments(
         db,
         company_id,
         contract_id=contract_id
-    ) 
+    )
+
+@router.get("/{contract_id}/payment-logs", response_model=List[schemas.PaymentLog])
+def get_contract_payment_logs(
+    contract_id: UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """계약의 결제 상태 변경 로그를 조회합니다."""
+    contract = crud.get_contract(db, contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # 권한 확인
+    if contract.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this contract")
+    
+    return crud.get_contract_payment_logs(db, contract_id, skip, limit)
+
+@router.get("/payment-logs/{log_id}", response_model=schemas.PaymentLog)
+def get_payment_log(
+    log_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """특정 결제 상태 변경 로그를 조회합니다."""
+    payment_log = crud.get_payment_log(db, log_id)
+    if not payment_log:
+        raise HTTPException(status_code=404, detail="Payment log not found")
+    
+    # 권한 확인
+    contract = crud.get_contract(db, payment_log.contract_id)
+    if contract.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this payment log")
+    
+    return payment_log 

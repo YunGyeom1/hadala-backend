@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database.base import Base
 import uuid
+from datetime import datetime
 
 class Company(Base):
     __tablename__ = "companies"
@@ -12,6 +13,10 @@ class Company(Base):
     name = Column(String, unique=True, nullable=False)
     owner = Column(UUID(as_uuid=True), ForeignKey("wholesalers.id"), nullable=True)
     description = Column(String)
+    business_number = Column(String(20), unique=True, nullable=False)
+    address = Column(String(200), nullable=False)
+    phone = Column(String(20), nullable=False)
+    email = Column(String(100), nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -23,3 +28,6 @@ class Company(Base):
     shipments = relationship("WholesaleShipment", back_populates="company")
     retail_contracts = relationship("RetailContract", back_populates="company")
     retail_shipments = relationship("RetailShipment", back_populates="company")
+    inventories = relationship("CompanyCropInventory", back_populates="company")
+    daily_settlements = relationship("DailySettlement", back_populates="company")
+    daily_accounting = relationship("DailyAccounting", back_populates="company")

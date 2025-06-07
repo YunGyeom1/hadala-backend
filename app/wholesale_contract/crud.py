@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, desc
 from typing import List, Optional
 from uuid import UUID
 from . import models, schemas
@@ -56,34 +56,29 @@ def get_contract(db: Session, contract_id: UUID, company_id: UUID) -> Optional[m
 def update_contract(
     db: Session,
     contract_id: UUID,
-    contract: schemas.WholesaleContractUpdate,
-    company_id: UUID
+    contract_update: schemas.WholesaleContractUpdate
 ) -> Optional[models.WholesaleContract]:
-    db_contract = get_contract(db, contract_id, company_id)
-    if not db_contract:
+    """계약 정보를 업데이트합니다."""
+    contract = get_contract(db, contract_id)
+    if not contract:
         return None
     
-    if db_contract.contract_status not in [models.ContractStatus.DRAFT, models.ContractStatus.CONFIRMED]:
-        return None
-
-    update_data = contract.dict(exclude_unset=True)
-    if 'items' in update_data:
-        items = update_data.pop('items')
-        # 기존 품목 삭제
-        db.query(models.WholesaleContractItem).filter(
-            models.WholesaleContractItem.contract_id == contract_id
-        ).delete()
-        # 새 품목 추가
-        for item in items:
-            db_item = models.WholesaleContractItem(**item.dict(), contract_id=contract_id)
-            db.add(db_item)
-
+    # 결제 상태가 변경되는 경우 로그 생성
+    if contract_update.payment_status and contract_update.payment_status != contract.payment_status:
+        create_payment_log(
+            db=db,
+            contract_id=contract_id,
+            old_status=contract.payment_status,
+            new_status=contract_update.payment_status
+        )
+    
+    update_data = contract_update.dict(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(db_contract, field, value)
-
+        setattr(contract, field, value)
+    
     db.commit()
-    db.refresh(db_contract)
-    return db_contract
+    db.refresh(contract)
+    return contract
 
 def delete_contract(db: Session, contract_id: UUID, company_id: UUID) -> bool:
     db_contract = get_contract(db, contract_id, company_id)
@@ -170,4 +165,46 @@ def delete_contract_item(
 
     db.delete(db_item)
     db.commit()
-    return True 
+    return True
+
+def create_payment_log(
+    db: Session,
+    contract_id: UUID,
+    old_status: models.PaymentStatus,
+    new_status: models.PaymentStatus,
+    changed_by: Optional[UUID] = None
+) -> models.WholesaleContractPaymentLog:
+    """결제 상태 변경 로그를 생성합니다."""
+    payment_log = models.WholesaleContractPaymentLog(
+        contract_id=contract_id,
+        old_status=old_status,
+        new_status=new_status,
+        changed_by=changed_by
+    )
+    db.add(payment_log)
+    db.commit()
+    db.refresh(payment_log)
+    return payment_log
+
+def get_contract_payment_logs(
+    db: Session,
+    contract_id: UUID,
+    skip: int = 0,
+    limit: int = 100
+) -> List[models.WholesaleContractPaymentLog]:
+    """특정 계약의 결제 상태 변경 로그를 조회합니다."""
+    return db.query(models.WholesaleContractPaymentLog)\
+        .filter(models.WholesaleContractPaymentLog.contract_id == contract_id)\
+        .order_by(desc(models.WholesaleContractPaymentLog.changed_at))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+
+def get_payment_log(
+    db: Session,
+    log_id: UUID
+) -> Optional[models.WholesaleContractPaymentLog]:
+    """특정 결제 상태 변경 로그를 조회합니다."""
+    return db.query(models.WholesaleContractPaymentLog)\
+        .filter(models.WholesaleContractPaymentLog.id == log_id)\
+        .first() 

@@ -1,0 +1,67 @@
+from pydantic import BaseModel
+from datetime import date, datetime
+from typing import Optional
+from uuid import UUID
+
+class DailySettlementBase(BaseModel):
+    date: date
+    company_id: UUID
+    center_id: UUID
+    total_wholesale_in_kg: float = 0
+    total_wholesale_in_price: float = 0
+    total_retail_out_kg: float = 0
+    total_retail_out_price: float = 0
+    discrepancy_in_kg: Optional[float] = None
+    discrepancy_out_kg: Optional[float] = None
+    total_in_kg: Optional[float] = None
+    total_out_kg: Optional[float] = None
+
+class DailySettlementCreate(DailySettlementBase):
+    pass
+
+class DailySettlementUpdate(BaseModel):
+    total_wholesale_in_kg: Optional[float] = None
+    total_wholesale_in_price: Optional[float] = None
+    total_retail_out_kg: Optional[float] = None
+    total_retail_out_price: Optional[float] = None
+    discrepancy_in_kg: Optional[float] = None
+    discrepancy_out_kg: Optional[float] = None
+    total_in_kg: Optional[float] = None
+    total_out_kg: Optional[float] = None
+
+class DailySettlement(DailySettlementBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DailyAccountingBase(BaseModel):
+    date: date
+    company_id: UUID
+    total_prepaid: float = 0
+    total_pre_received: float = 0
+    total_paid: float = 0
+    total_received: float = 0
+    total_pending_payment: float = 0
+    total_pending_receipt: float = 0
+
+class DailyAccountingCreate(DailyAccountingBase):
+    pass
+
+class DailyAccountingUpdate(BaseModel):
+    total_prepaid: Optional[float] = None
+    total_pre_received: Optional[float] = None
+    total_paid: Optional[float] = None
+    total_received: Optional[float] = None
+    total_pending_payment: Optional[float] = None
+    total_pending_receipt: Optional[float] = None
+
+class DailyAccounting(DailyAccountingBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True 
