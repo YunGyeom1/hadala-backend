@@ -9,7 +9,7 @@ from app.core.auth.crud import verify_access_token
 from app.core.auth.schemas import VerifyTokenRequest
 from app.company.crud import get_company
 
-router = APIRouter()
+router = APIRouter(prefix="/centers", tags=["centers"])
 
 @router.post("", response_model=schemas.CenterResponse)
 def create_center(

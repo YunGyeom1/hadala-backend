@@ -19,5 +19,6 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # 관계
-    # farmer = relationship("Farmer", back_populates="user", uselist=False)
-    # wholesaler = relationship("Wholesaler", back_populates="user", uselist=False)
+    farmer = relationship("Farmer", back_populates="user", uselist=False)
+    wholesaler = relationship("Wholesaler", back_populates="user", uselist=False)
+    retailer = relationship("Retailer", back_populates="user", uselist=False)

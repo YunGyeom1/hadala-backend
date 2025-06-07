@@ -9,7 +9,7 @@ from app.core.auth.schemas import VerifyTokenRequest, RefreshTokenRequest, Refre
 from app.user.schemas import UserCreateOAuth, UserOut, OAuthResponse, OAuthError, UserResponse, UserUpdate
 from app.user.crud import get_or_create_oauth_user
 
-router = APIRouter()
+router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/me", response_model=schemas.UserResponse)
 def get_my_info(

@@ -9,7 +9,7 @@ from app.core.auth.crud import verify_access_token
 from app.core.auth.schemas import VerifyTokenRequest
 from app.company.crud import get_company
 
-router = APIRouter()
+router = APIRouter(prefix="/wholesalers", tags=["wholesalers"])
 
 @router.get("/me", response_model=schemas.WholesalerResponse)
 def get_my_info(

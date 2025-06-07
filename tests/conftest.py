@@ -20,8 +20,8 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="function")
 def db():
-    # 테스트 데이터베이스 테이블 생성 (User 테이블만)
-    Base.metadata.create_all(bind=engine, tables=[User.__table__])
+    # 테스트 데이터베이스 전체 테이블 생성
+    Base.metadata.create_all(bind=engine)
     
     # 테스트용 세션 생성
     db = TestingSessionLocal()
@@ -29,7 +29,7 @@ def db():
         yield db
     finally:
         db.close()
-        # 테스트 후 테이블 삭제
+        # 테스트 후 테이블 전체 삭제
         Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")

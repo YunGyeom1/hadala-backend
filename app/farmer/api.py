@@ -8,7 +8,7 @@ from app.farmer import crud, schemas
 from app.core.auth.crud import verify_access_token
 from app.core.auth.schemas import VerifyTokenRequest
 
-router = APIRouter()
+router = APIRouter(prefix="/farmers", tags=["farmers"])
 
 @router.post("/", response_model=schemas.FarmerResponse)
 def create_farmer(

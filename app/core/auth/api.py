@@ -20,7 +20,7 @@ from app.core.auth.crud import (
 )
 from app.database.session import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/google-login", response_model=GoogleOAuthLoginResponse)
 async def google_login(
