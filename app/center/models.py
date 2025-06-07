@@ -8,7 +8,7 @@ from app.database.base import Base
 center_wholesaler = Table(
     "center_wholesaler",
     Base.metadata,
-    Column("center_id", String(36), ForeignKey("centers.id"), primary_key=True),
+    Column("center_id", String(36), ForeignKey("collection_centers.id"), primary_key=True),
     Column("wholesaler_id", String(36), ForeignKey("wholesalers.id"), primary_key=True)
 )
 
@@ -28,6 +28,7 @@ class CollectionCenter(Base):
     contracts = relationship("WholesaleContract", back_populates="center")
     shipments = relationship("WholesaleShipment", back_populates="center")
     retail_contracts = relationship("RetailContract", back_populates="center")
+    retail_shipments = relationship("RetailShipment", back_populates="center")
     inventories = relationship("CompanyCropInventory", back_populates="center")
     daily_settlements = relationship("DailySettlement", back_populates="center")
 

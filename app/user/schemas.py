@@ -1,43 +1,37 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from pydantic import ConfigDict
+from datetime import datetime
+from uuid import UUID
 
-class UserCreateOAuth(BaseModel):
-    name: str
+class UserBase(BaseModel):
     email: EmailStr
+    name: str
+    picture_url: Optional[str] = None
+
+class UserCreateOAuth(UserBase):
     oauth_provider: str
     oauth_sub: str
 
-class UserOut(BaseModel):
-    id: str
-    name: str
-    email: EmailStr
-    model_config = ConfigDict(from_attributes=True)
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    picture_url: Optional[str] = None
 
-class OAuthResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    user: UserOut
+class UserOut(UserBase):
+    id: UUID
+    oauth_sub: str
+    created_at: datetime
+    updated_at: datetime
 
-class OAuthError(BaseModel):
-    detail: str
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-class RefreshTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    class Config:
+        from_attributes = True
 
 class UserResponse(UserOut):
     pass
 
-class UserUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
+class OAuthResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    user: UserOut
 
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
+class OAuthError(BaseModel):
+    detail: str

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import date, datetime
 from typing import List, Optional
 from .models import ContractStatus, PaymentStatus
@@ -23,9 +23,8 @@ class WholesaleContractItem(WholesaleContractItemBase):
     contract_id: UUID4
     total_price: float
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
 class WholesaleContractBase(BaseModel):
     center_id: UUID4
@@ -53,9 +52,15 @@ class WholesaleContract(WholesaleContractBase):
     created_at: datetime
     updated_at: datetime
     items: List[WholesaleContractItem]
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PaymentStatusUpdate(BaseModel):
-    payment_status: PaymentStatus 
+    payment_status: PaymentStatus
+
+class PaymentLog(BaseModel):
+    id: UUID4
+    contract_id: UUID4
+    old_status: PaymentStatus
+    new_status: PaymentStatus
+    changed_at: datetime
+    model_config = ConfigDict(from_attributes=True) 

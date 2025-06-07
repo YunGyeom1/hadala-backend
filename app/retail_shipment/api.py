@@ -4,7 +4,8 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date
 
-from app.core.auth.utils import get_current_user, verify_company_affiliation
+from app.core.auth.dependencies import get_current_user
+from app.core.auth.utils import verify_company_affiliation
 from app.database.session import get_db
 from . import crud, schemas
 
@@ -17,7 +18,7 @@ def create_shipment(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.create_shipment(db, shipment, company_id)
+    return schemas.RetailShipment.model_validate(crud.create_shipment(db, shipment, company_id))
 
 @router.get("/", response_model=List[schemas.RetailShipment])
 def get_shipments(
@@ -33,7 +34,7 @@ def get_shipments(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.get_shipments(
+    return [schemas.RetailShipment.model_validate(s) for s in crud.get_shipments(
         db,
         company_id,
         contract_id=contract_id,
@@ -44,7 +45,7 @@ def get_shipments(
         end_date=end_date,
         skip=skip,
         limit=limit
-    )
+    )]
 
 @router.get("/{shipment_id}", response_model=schemas.RetailShipment)
 def get_shipment(
@@ -56,7 +57,7 @@ def get_shipment(
     shipment = crud.get_shipment(db, shipment_id, company_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
-    return shipment
+    return schemas.RetailShipment.model_validate(shipment)
 
 @router.put("/{shipment_id}", response_model=schemas.RetailShipment)
 def update_shipment(
@@ -69,7 +70,7 @@ def update_shipment(
     shipment = crud.update_shipment(db, shipment_id, company_id, shipment_update)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found or cannot be updated")
-    return shipment
+    return schemas.RetailShipment.model_validate(shipment)
 
 @router.delete("/{shipment_id}")
 def delete_shipment(
@@ -89,7 +90,7 @@ def get_shipment_items(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.get_shipment_items(db, shipment_id, company_id)
+    return [schemas.RetailShipmentItem.model_validate(item) for item in crud.get_shipment_items(db, shipment_id, company_id)]
 
 @router.post("/{shipment_id}/items", response_model=schemas.RetailShipmentItem)
 def add_shipment_item(
@@ -102,7 +103,7 @@ def add_shipment_item(
     db_item = crud.add_shipment_item(db, shipment_id, company_id, item)
     if not db_item:
         raise HTTPException(status_code=404, detail="Shipment not found or cannot be modified")
-    return db_item
+    return schemas.RetailShipmentItem.model_validate(db_item)
 
 @router.put("/items/{item_id}", response_model=schemas.RetailShipmentItem)
 def update_shipment_item(
@@ -115,7 +116,7 @@ def update_shipment_item(
     item = crud.update_shipment_item(db, item_id, company_id, item_update)
     if not item:
         raise HTTPException(status_code=404, detail="Shipment item not found or cannot be updated")
-    return item
+    return schemas.RetailShipmentItem.model_validate(item)
 
 @router.delete("/items/{item_id}")
 def delete_shipment_item(
@@ -137,7 +138,7 @@ def create_shipment_from_contract(
 ):
     company_id = verify_company_affiliation(current_user)
     shipment.contract_id = contract_id
-    return crud.create_shipment(db, shipment, company_id)
+    return schemas.RetailShipment.model_validate(crud.create_shipment(db, shipment, company_id))
 
 @router.get("/contracts/{contract_id}/shipments", response_model=List[schemas.RetailShipment])
 def get_contract_shipments(
@@ -146,7 +147,7 @@ def get_contract_shipments(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.get_shipments(db, company_id, contract_id=contract_id)
+    return [schemas.RetailShipment.model_validate(s) for s in crud.get_shipments(db, company_id, contract_id=contract_id)]
 
 @router.get("/contracts/{contract_id}/shipment-progress", response_model=List[schemas.ShipmentProgress])
 def get_contract_shipment_progress(
@@ -155,7 +156,7 @@ def get_contract_shipment_progress(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.get_shipment_progress(db, contract_id, company_id)
+    return [schemas.ShipmentProgress.model_validate(p) for p in crud.get_shipment_progress(db, contract_id, company_id)]
 
 @router.get("/retailers/{retailer_id}/shipments", response_model=List[schemas.RetailShipment])
 def get_retailer_shipments(
@@ -164,7 +165,7 @@ def get_retailer_shipments(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.get_shipments(db, company_id, retailer_id=retailer_id)
+    return [schemas.RetailShipment.model_validate(s) for s in crud.get_shipments(db, company_id, retailer_id=retailer_id)]
 
 @router.get("/my-company/shipments", response_model=List[schemas.RetailShipment])
 def get_company_shipments(
@@ -172,7 +173,7 @@ def get_company_shipments(
     current_user = Depends(get_current_user)
 ):
     company_id = verify_company_affiliation(current_user)
-    return crud.get_shipments(db, company_id)
+    return [schemas.RetailShipment.model_validate(s) for s in crud.get_shipments(db, company_id)]
 
 @router.post("/{shipment_id}/finalize", response_model=schemas.RetailShipment)
 def finalize_shipment(
@@ -184,4 +185,4 @@ def finalize_shipment(
     shipment = crud.finalize_shipment(db, shipment_id, company_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found or cannot be finalized")
-    return shipment 
+    return schemas.RetailShipment.model_validate(shipment) 

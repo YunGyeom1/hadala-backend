@@ -11,7 +11,7 @@ class CompanyCropInventory(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
     date = Column(Date, nullable=False)
     company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
-    center_id = Column(String(36), ForeignKey("centers.id"), nullable=False)
+    center_id = Column(String(36), ForeignKey("collection_centers.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

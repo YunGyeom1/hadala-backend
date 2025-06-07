@@ -3,9 +3,10 @@ from sqlalchemy import and_, desc
 from typing import List, Optional
 from uuid import UUID
 from . import models, schemas
-from app.core.auth.utils import get_current_user
+from app.core.auth.dependencies import get_current_user
 
-def create_contract(db: Session, contract: schemas.WholesaleContractCreate, company_id: UUID) -> models.WholesaleContract:
+def create_contract(db: Session, contract: schemas.WholesaleContractCreate, company_id: UUID):
+    """새 계약 생성"""
     db_contract = models.WholesaleContract(
         **contract.dict(exclude={'items'}),
         company_id=company_id
@@ -31,7 +32,8 @@ def get_contracts(
     center_id: Optional[UUID] = None,
     wholesaler_id: Optional[UUID] = None,
     farmer_id: Optional[UUID] = None
-) -> List[models.WholesaleContract]:
+):
+    """계약 목록 조회"""
     query = db.query(models.WholesaleContract).filter(models.WholesaleContract.company_id == company_id)
     
     if status:
@@ -45,21 +47,21 @@ def get_contracts(
     
     return query.offset(skip).limit(limit).all()
 
-def get_contract(db: Session, contract_id: UUID, company_id: UUID) -> Optional[models.WholesaleContract]:
-    return db.query(models.WholesaleContract).filter(
-        and_(
-            models.WholesaleContract.id == contract_id,
-            models.WholesaleContract.company_id == company_id
-        )
-    ).first()
+def get_contract(db: Session, contract_id: UUID, company_id: Optional[UUID] = None):
+    """특정 계약 조회"""
+    query = db.query(models.WholesaleContract).filter(models.WholesaleContract.id == contract_id)
+    if company_id:
+        query = query.filter(models.WholesaleContract.company_id == company_id)
+    return query.first()
 
 def update_contract(
     db: Session,
     contract_id: UUID,
-    contract_update: schemas.WholesaleContractUpdate
-) -> Optional[models.WholesaleContract]:
+    contract_update: schemas.WholesaleContractUpdate,
+    company_id: Optional[UUID] = None
+):
     """계약 정보를 업데이트합니다."""
-    contract = get_contract(db, contract_id)
+    contract = get_contract(db, contract_id, company_id)
     if not contract:
         return None
     
@@ -69,7 +71,8 @@ def update_contract(
             db=db,
             contract_id=contract_id,
             old_status=contract.payment_status,
-            new_status=contract_update.payment_status
+            new_status=contract_update.payment_status,
+            changed_by=contract.farmer_id
         )
     
     update_data = contract_update.dict(exclude_unset=True)
@@ -80,7 +83,8 @@ def update_contract(
     db.refresh(contract)
     return contract
 
-def delete_contract(db: Session, contract_id: UUID, company_id: UUID) -> bool:
+def delete_contract(db: Session, contract_id: UUID, company_id: UUID):
+    """계약 삭제"""
     db_contract = get_contract(db, contract_id, company_id)
     if not db_contract or db_contract.contract_status != models.ContractStatus.DRAFT:
         return False
@@ -94,7 +98,8 @@ def update_contract_status(
     contract_id: UUID,
     new_status: models.ContractStatus,
     company_id: UUID
-) -> Optional[models.WholesaleContract]:
+):
+    """계약 상태 업데이트"""
     db_contract = get_contract(db, contract_id, company_id)
     if not db_contract:
         return None
@@ -109,7 +114,7 @@ def update_payment_status(
     contract_id: UUID,
     new_status: models.PaymentStatus,
     company_id: UUID
-) -> Optional[models.WholesaleContract]:
+):
     db_contract = get_contract(db, contract_id, company_id)
     if not db_contract:
         return None
@@ -122,11 +127,12 @@ def update_payment_status(
 def get_contract_items(
     db: Session,
     contract_id: UUID,
-    company_id: UUID
-) -> List[models.WholesaleContractItem]:
+    company_id: Optional[UUID] = None
+):
+    """계약 품목 목록 조회"""
     contract = get_contract(db, contract_id, company_id)
     if not contract:
-        return []
+        return None
     return contract.items
 
 def update_contract_item(
@@ -134,7 +140,8 @@ def update_contract_item(
     item_id: UUID,
     item: schemas.WholesaleContractItemUpdate,
     company_id: UUID
-) -> Optional[models.WholesaleContractItem]:
+):
+    """계약 품목 수정"""
     db_item = db.query(models.WholesaleContractItem).filter(models.WholesaleContractItem.id == item_id).first()
     if not db_item:
         return None
@@ -154,7 +161,8 @@ def delete_contract_item(
     db: Session,
     item_id: UUID,
     company_id: UUID
-) -> bool:
+):
+    """계약 품목 삭제"""
     db_item = db.query(models.WholesaleContractItem).filter(models.WholesaleContractItem.id == item_id).first()
     if not db_item:
         return False
@@ -172,8 +180,8 @@ def create_payment_log(
     contract_id: UUID,
     old_status: models.PaymentStatus,
     new_status: models.PaymentStatus,
-    changed_by: Optional[UUID] = None
-) -> models.WholesaleContractPaymentLog:
+    changed_by: UUID
+):
     """결제 상태 변경 로그를 생성합니다."""
     payment_log = models.WholesaleContractPaymentLog(
         contract_id=contract_id,
@@ -189,10 +197,15 @@ def create_payment_log(
 def get_contract_payment_logs(
     db: Session,
     contract_id: UUID,
+    company_id: UUID,
     skip: int = 0,
     limit: int = 100
-) -> List[models.WholesaleContractPaymentLog]:
-    """특정 계약의 결제 상태 변경 로그를 조회합니다."""
+):
+    """계약의 결제 상태 변경 로그를 조회합니다."""
+    contract = get_contract(db, contract_id, company_id)
+    if not contract:
+        return None
+
     return db.query(models.WholesaleContractPaymentLog)\
         .filter(models.WholesaleContractPaymentLog.contract_id == contract_id)\
         .order_by(desc(models.WholesaleContractPaymentLog.changed_at))\
@@ -202,9 +215,15 @@ def get_contract_payment_logs(
 
 def get_payment_log(
     db: Session,
-    log_id: UUID
-) -> Optional[models.WholesaleContractPaymentLog]:
+    log_id: UUID,
+    company_id: UUID
+):
     """특정 결제 상태 변경 로그를 조회합니다."""
     return db.query(models.WholesaleContractPaymentLog)\
-        .filter(models.WholesaleContractPaymentLog.id == log_id)\
-        .first() 
+        .filter(
+            and_(
+                models.WholesaleContractPaymentLog.id == log_id,
+                models.WholesaleContractPaymentLog.contract_id == log_id,
+                models.WholesaleContractPaymentLog.company_id == company_id
+            )
+        ).first() 

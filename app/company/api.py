@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.database.session import get_db
 from app.company import crud, schemas
-from app.core.auth.crud import verify_access_token
+from app.core.auth.dependencies import verify_access_token
 from app.core.auth.schemas import VerifyTokenRequest
 from app.wholesaler.crud import get_wholesaler_by_user_id
 

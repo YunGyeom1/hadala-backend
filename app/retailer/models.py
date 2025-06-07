@@ -17,4 +17,6 @@ class Retailer(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    user = relationship("User", back_populates="retailer") 
+    user = relationship("User", back_populates="retailer")
+    retail_contracts = relationship("RetailContract", back_populates="retailer")
+    shipments = relationship("RetailShipment", back_populates="retailer") 

@@ -4,7 +4,8 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date
 from app.database.session import get_db
-from app.core.auth.utils import get_current_user, get_company_member_dependency, get_company_role_dependency, get_current_user_company_id
+from app.core.auth.dependencies import get_current_user
+from app.core.auth.utils import get_company_member_dependency, get_company_role_dependency, get_current_user_company_id
 from app.user.models import User
 from . import crud, schemas
 
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/wholesale-shipments", tags=["wholesale-shipments"])
 def create_shipment(
     shipment: schemas.WholesaleShipmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """새 출고 기록 생성"""
@@ -24,7 +25,7 @@ def create_shipment(
 @router.get("/", response_model=List[schemas.WholesaleShipment])
 def get_shipments(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency()),
     skip: int = 0,
     limit: int = 100,
@@ -50,7 +51,7 @@ def get_shipments(
 def get_shipment(
     shipment_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """특정 출고 조회"""
@@ -65,7 +66,7 @@ def update_shipment(
     shipment_id: UUID,
     shipment: schemas.WholesaleShipmentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """출고 정보 수정"""
@@ -79,7 +80,7 @@ def update_shipment(
 def delete_shipment(
     shipment_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """출고 삭제"""
@@ -92,7 +93,7 @@ def delete_shipment(
 def get_shipment_items(
     shipment_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """출고 품목 목록 조회"""
@@ -107,7 +108,7 @@ def update_shipment_item(
     item_id: UUID,
     item: schemas.WholesaleShipmentItemUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """출고 품목 수정"""
@@ -121,7 +122,7 @@ def update_shipment_item(
 def delete_shipment_item(
     item_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """출고 품목 삭제"""
@@ -134,7 +135,7 @@ def delete_shipment_item(
 def get_contract_shipments(
     contract_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """계약에 연결된 출고 목록 조회"""
@@ -149,7 +150,7 @@ def create_shipment_from_contract(
     contract_id: UUID,
     shipment: schemas.WholesaleShipmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """계약 기준으로 출고 생성"""
@@ -163,7 +164,7 @@ def create_shipment_from_contract(
 def get_contract_shipment_progress(
     contract_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_member_dependency())
 ):
     """계약 품목별 출고 이행 현황 조회"""
@@ -177,7 +178,7 @@ def get_contract_shipment_progress(
 def finalize_shipment(
     shipment_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user  = Depends(get_current_user),
     _: None = Depends(get_company_role_dependency(["owner", "manager"]))
 ):
     """출고 완료 처리"""

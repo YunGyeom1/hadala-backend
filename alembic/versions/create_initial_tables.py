@@ -51,9 +51,9 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(), nullable=False)
     )
 
-    # centers 테이블 생성
+    # collection_centers 테이블 생성
     op.create_table(
-        'centers',
+        'collection_centers',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column('company_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('companies.id'), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
@@ -90,7 +90,7 @@ def upgrade():
     # center_wholesaler 테이블 생성 (중간 테이블)
     op.create_table(
         'center_wholesaler',
-        sa.Column('center_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('centers.id'), primary_key=True),
+        sa.Column('center_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('collection_centers.id'), primary_key=True),
         sa.Column('wholesaler_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('wholesalers.id'), primary_key=True)
     )
 
@@ -99,7 +99,7 @@ def downgrade():
     op.drop_table('center_wholesaler')
     op.drop_table('retailers')
     op.drop_table('farmers')
-    op.drop_table('centers')
+    op.drop_table('collection_centers')
     op.drop_table('wholesalers')
     op.drop_table('companies')
     op.drop_table('users') 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -20,9 +20,7 @@ class RetailShipmentItem(RetailShipmentItemBase):
     shipment_id: UUID4
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class RetailShipmentBase(BaseModel):
     retailer_id: UUID4
@@ -47,9 +45,7 @@ class RetailShipment(RetailShipmentBase):
     created_at: datetime
     updated_at: datetime
     items: List[RetailShipmentItem]
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ShipmentProgress(BaseModel):
     crop_name: str

@@ -4,12 +4,11 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date
 
-from app.core.auth.utils import get_current_user, verify_company_affiliation
+from app.core.auth.dependencies import get_current_user
 from app.database.session import get_db
 from app.inventory import crud, schemas
-from app.auth.dependencies import get_current_user
-from app.auth.models import User
-from app.inventory.dependencies import verify_company_affiliation
+from app.user.models import User
+from app.core.auth.dependencies import verify_company_affiliation
 
 router = APIRouter()
 
@@ -120,7 +119,7 @@ def get_company_inventories_by_date(
 @router.post("/settlements/today", response_model=schemas.DailySettlement)
 def create_today_settlement(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user  = Depends(get_current_user)
 ):
     """오늘자 결산을 생성합니다."""
     settlement = crud.create_today_settlement(db, current_user.company_id)
@@ -135,7 +134,7 @@ def create_today_settlement(
 def create_today_settlement_for_center(
     center_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user  = Depends(get_current_user)
 ):
     """특정 센터의 오늘자 결산을 생성합니다."""
     settlement = crud.create_today_settlement(db, current_user.company_id, center_id)

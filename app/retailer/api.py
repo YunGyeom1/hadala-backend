@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.database.session import get_db
 from app.retailer import crud, schemas
-from app.core.auth.crud import verify_access_token
+from app.core.auth.dependencies import verify_access_token
 from app.core.auth.schemas import VerifyTokenRequest
 
 router = APIRouter(prefix="/retailers", tags=["retailers"])

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from app.database.session import get_db
 from app.user import crud, schemas
-from app.core.auth.crud import verify_access_token, verify_refresh_token, create_access_token
+from app.core.auth.utils import verify_access_token, verify_refresh_token, create_access_token
 from app.core.auth.schemas import VerifyTokenRequest, RefreshTokenRequest, RefreshTokenResponse
 from app.user.schemas import UserCreateOAuth, UserOut, OAuthResponse, OAuthError, UserResponse, UserUpdate
 from app.user.crud import get_or_create_oauth_user
@@ -24,14 +24,13 @@ def get_my_info(
     user_id = UUID(token_data.sub)
     
     # 사용자 정보 조회
-    user = crud.get_user(db, user_id)
+    user = crud.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자를 찾을 수 없습니다"
         )
-    
-    return user
+    return schemas.UserResponse.model_validate(user)
 
 @router.put("/me", response_model=schemas.UserResponse)
 def update_my_info(
@@ -47,37 +46,40 @@ def update_my_info(
     user_id = UUID(token_data.sub)
     
     # 사용자 정보 조회
-    user = crud.get_user(db, user_id)
+    user = crud.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자를 찾을 수 없습니다"
         )
-    
     # 정보 업데이트
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(user, field, value)
-    
     db.commit()
     db.refresh(user)
-    return user 
+    return schemas.UserResponse.model_validate(user)
 
 @router.post("/oauth-login", response_model=OAuthResponse, responses={400: {"model": OAuthError}})
 async def oauth_login(user_info: UserCreateOAuth, db: Session = Depends(get_db)):
     try:
         user, token_pair = get_or_create_oauth_user(db, user_info)
+        if not token_pair or not token_pair.access_token or not token_pair.refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="토큰 생성 중 오류가 발생했습니다."
+            )
         return OAuthResponse(
             access_token=token_pair.access_token,
             refresh_token=token_pair.refresh_token,
-            user=user
+            user=UserOut.model_validate(user)
         )
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail="OAuth 로그인 처리 중 오류가 발생했습니다."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"OAuth 로그인 처리 중 오류가 발생했습니다: {str(e)}"
         )
 
 @router.post("/refresh", response_model=RefreshTokenResponse, responses={401: {"model": OAuthError}})

@@ -21,11 +21,12 @@ class Wholesaler(Base):
     # 관계
     user = relationship("User", back_populates="wholesaler")
     company = relationship("Company", back_populates="wholesalers", foreign_keys=[company_id])
-    collection_centers = relationship(
+    centers = relationship(
         "CollectionCenter",
-        secondary="collection_center_wholesaler",
+        secondary="center_wholesaler",
         back_populates="wholesalers"
     )
     contracts = relationship("WholesaleContract", back_populates="wholesaler")
     shipments = relationship("WholesaleShipment", back_populates="wholesaler")
     retail_contracts = relationship("RetailContract", back_populates="wholesaler")
+    retail_shipments = relationship("RetailShipment", back_populates="wholesaler")

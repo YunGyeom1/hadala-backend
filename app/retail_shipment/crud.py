@@ -2,13 +2,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from typing import List, Optional, Dict
 from uuid import UUID
+from datetime import date
 from . import models, schemas
 
 def create_shipment(
     db: Session,
     shipment: schemas.RetailShipmentCreate,
     company_id: UUID
-) -> models.RetailShipment:
+):
     db_shipment = models.RetailShipment(
         company_id=company_id,
         retailer_id=shipment.retailer_id,
@@ -47,7 +48,7 @@ def get_shipments(
     end_date: Optional[date] = None,
     skip: int = 0,
     limit: int = 100
-) -> List[models.RetailShipment]:
+):
     query = db.query(models.RetailShipment).filter(models.RetailShipment.company_id == company_id)
     
     if contract_id:
@@ -65,7 +66,7 @@ def get_shipments(
     
     return query.offset(skip).limit(limit).all()
 
-def get_shipment(db: Session, shipment_id: UUID, company_id: UUID) -> Optional[models.RetailShipment]:
+def get_shipment(db: Session, shipment_id: UUID, company_id: UUID):
     return db.query(models.RetailShipment).filter(
         and_(
             models.RetailShipment.id == shipment_id,
@@ -78,7 +79,7 @@ def update_shipment(
     shipment_id: UUID,
     company_id: UUID,
     shipment_update: schemas.RetailShipmentUpdate
-) -> Optional[models.RetailShipment]:
+):
     db_shipment = get_shipment(db, shipment_id, company_id)
     if not db_shipment or db_shipment.is_finalized:
         return None
@@ -90,7 +91,7 @@ def update_shipment(
     db.refresh(db_shipment)
     return db_shipment
 
-def delete_shipment(db: Session, shipment_id: UUID, company_id: UUID) -> bool:
+def delete_shipment(db: Session, shipment_id: UUID, company_id: UUID):
     db_shipment = get_shipment(db, shipment_id, company_id)
     if not db_shipment or db_shipment.is_finalized:
         return False
@@ -103,7 +104,7 @@ def get_shipment_items(
     db: Session,
     shipment_id: UUID,
     company_id: UUID
-) -> List[models.RetailShipmentItem]:
+):
     return db.query(models.RetailShipmentItem).join(
         models.RetailShipment
     ).filter(
@@ -118,7 +119,7 @@ def add_shipment_item(
     shipment_id: UUID,
     company_id: UUID,
     item: schemas.RetailShipmentItemCreate
-) -> Optional[models.RetailShipmentItem]:
+):
     db_shipment = get_shipment(db, shipment_id, company_id)
     if not db_shipment or db_shipment.is_finalized:
         return None
@@ -141,7 +142,7 @@ def update_shipment_item(
     item_id: UUID,
     company_id: UUID,
     item_update: schemas.RetailShipmentItemUpdate
-) -> Optional[models.RetailShipmentItem]:
+):
     db_item = db.query(models.RetailShipmentItem).join(
         models.RetailShipment
     ).filter(
@@ -165,7 +166,7 @@ def delete_shipment_item(
     db: Session,
     item_id: UUID,
     company_id: UUID
-) -> bool:
+):
     db_item = db.query(models.RetailShipmentItem).join(
         models.RetailShipment
     ).filter(
@@ -186,7 +187,7 @@ def finalize_shipment(
     db: Session,
     shipment_id: UUID,
     company_id: UUID
-) -> Optional[models.RetailShipment]:
+):
     db_shipment = get_shipment(db, shipment_id, company_id)
     if not db_shipment or db_shipment.is_finalized:
         return None
@@ -200,7 +201,7 @@ def get_shipment_progress(
     db: Session,
     contract_id: UUID,
     company_id: UUID
-) -> List[schemas.ShipmentProgress]:
+):
     # 계약 품목별 총 수량
     contract_items = db.query(
         models.RetailContractItem.crop_name,
