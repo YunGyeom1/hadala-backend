@@ -183,6 +183,7 @@ def get_latest_inventory_date(db: Session, company_id: UUID) -> Optional[date]:
         .first()
     return latest_inventory.date if latest_inventory else None
 
+
 def calculate_daily_settlement_for_date(
     db: Session,
     company_id: UUID,
@@ -195,52 +196,53 @@ def calculate_daily_settlement_for_date(
     if not latest_inventory_date:
         return None
 
-    # 인벤토리 기간 동안의 출하 정보 조회
-    shipments = db.query(WholesaleShipment)\
-        .filter(
-            WholesaleShipment.company_id == company_id,
-            WholesaleShipment.center_id == center_id,
-            WholesaleShipment.shipment_date >= latest_inventory_date,
-            WholesaleShipment.shipment_date <= target_date
-        ).all()
+    # 도매 출하 정보 조회
+    shipments = db.query(WholesaleShipment).filter(
+        WholesaleShipment.company_id == company_id,
+        WholesaleShipment.center_id == center_id,
+        WholesaleShipment.shipment_date >= latest_inventory_date,
+        WholesaleShipment.shipment_date <= target_date
+    ).all()
 
     # 소매 출하 정보 조회
-    retail_shipments = db.query(RetailShipment)\
-        .filter(
-            RetailShipment.company_id == company_id,
-            RetailShipment.shipment_date >= latest_inventory_date,
-            RetailShipment.shipment_date <= target_date
-        ).all()
+    retail_shipments = db.query(RetailShipment).filter(
+        RetailShipment.company_id == company_id,
+        RetailShipment.shipment_date >= latest_inventory_date,
+        RetailShipment.shipment_date <= target_date
+    ).all()
 
-    # 수량 집계
-    total_wholesale_in_kg = sum(
-        sum(item.quantity_kg for item in shipment.items)
-        for shipment in shipments
-    )
-    total_retail_out_kg = sum(
-        sum(item.quantity_kg for item in shipment.items)
-        for shipment in retail_shipments
-    )
+    # 수량 및 가격 집계
+    total_wholesale_in_kg = 0
+    total_wholesale_in_price = 0
+    for shipment in shipments:
+        for item in shipment.items:
+            total_wholesale_in_kg += item.quantity_kg
+            total_wholesale_in_price += item.quantity_kg * item.unit_price
+
+    total_retail_out_kg = 0
+    total_retail_out_price = 0
+    for shipment in retail_shipments:
+        for item in shipment.items:
+            total_retail_out_kg += item.quantity_kg
+            total_retail_out_price += item.quantity_kg * item.unit_price
 
     # 계약 대비 차이 계산
-    wholesale_discrepancy_kg = 0
-    retail_discrepancy_kg = 0
+    discrepancy_in_kg = 0
+    discrepancy_out_kg = 0
 
-    # 도매 계약 대비 차이
     for shipment in shipments:
         contract = shipment.contract
         if contract:
             contract_quantity = sum(item.quantity_kg for item in contract.items)
             shipment_quantity = sum(item.quantity_kg for item in shipment.items)
-            wholesale_discrepancy_kg += (shipment_quantity - contract_quantity)
+            discrepancy_in_kg += shipment_quantity - contract_quantity
 
-    # 소매 계약 대비 차이
     for shipment in retail_shipments:
         contract = shipment.contract
         if contract:
             contract_quantity = sum(item.quantity_kg for item in contract.items)
             shipment_quantity = sum(item.quantity_kg for item in shipment.items)
-            retail_discrepancy_kg += (shipment_quantity - contract_quantity)
+            discrepancy_out_kg += shipment_quantity - contract_quantity
 
     # 결산 정보 생성
     settlement = DailySettlement(
@@ -248,19 +250,19 @@ def calculate_daily_settlement_for_date(
         company_id=company_id,
         center_id=center_id,
         total_wholesale_in_kg=total_wholesale_in_kg,
+        total_wholesale_in_price=total_wholesale_in_price,
         total_retail_out_kg=total_retail_out_kg,
-        wholesale_discrepancy_kg=wholesale_discrepancy_kg,
-        retail_discrepancy_kg=retail_discrepancy_kg,
-        total_inflow_kg=total_wholesale_in_kg,
-        total_outflow_kg=total_retail_out_kg,
-        net_flow_kg=total_wholesale_in_kg - total_retail_out_kg
+        total_retail_out_price=total_retail_out_price,
+        discrepancy_in_kg=discrepancy_in_kg,
+        discrepancy_out_kg=discrepancy_out_kg,
+        total_in_kg=total_wholesale_in_kg,
+        total_out_kg=total_retail_out_kg
     )
 
     db.add(settlement)
     db.commit()
     db.refresh(settlement)
     return settlement
-
 def create_today_settlement(
     db: Session,
     company_id: UUID,

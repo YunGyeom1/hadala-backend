@@ -58,15 +58,15 @@ class RetailContract(Base):
 class RetailContractItem(Base):
     __tablename__ = "retail_contract_items"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    contract_id = Column(String(36), ForeignKey("retail_contracts.id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    contract_id = Column(UUID(as_uuid=True), ForeignKey("retail_contracts.id"), nullable=False)
     crop_name = Column(String(100), nullable=False)
     quantity_kg = Column(Float, nullable=False)
     unit_price = Column(Float, nullable=False)
     total_price = Column(Float, nullable=False)
     quality_required = Column(String(1), nullable=False)  # A, B, C
     created_at = Column(DateTime, default=datetime.utcnow)
-
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Relationships
     contract = relationship("RetailContract", back_populates="items")
 
@@ -75,9 +75,9 @@ class RetailContractPaymentLog(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     contract_id = Column(UUID(as_uuid=True), ForeignKey("retail_contracts.id"), nullable=False)
+    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     old_status = Column(Enum(PaymentStatus), nullable=False)
     new_status = Column(Enum(PaymentStatus), nullable=False)
-    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Relationships

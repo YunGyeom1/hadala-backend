@@ -18,7 +18,7 @@ class CenterInDB(CenterBase):
     id: UUID4
     company_id: UUID4
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime]
     model_config = ConfigDict(from_attributes=True)
 
 class CenterResponse(CenterInDB):

@@ -8,14 +8,14 @@ from app.database.base import Base
 center_wholesaler = Table(
     "center_wholesaler",
     Base.metadata,
-    Column("center_id", String(36), ForeignKey("collection_centers.id"), primary_key=True),
-    Column("wholesaler_id", String(36), ForeignKey("wholesalers.id"), primary_key=True)
+    Column("center_id", UUID, ForeignKey("collection_centers.id"), primary_key=True),
+    Column("wholesaler_id", UUID, ForeignKey("wholesalers.id"), primary_key=True)
 )
 
 class Center(Base):
     __tablename__ = "collection_centers"
 
-    id = Column(UUID, primary_key=True, index=True)
+    id = Column(UUID, primary_key=True, index=True, default=uuid4)
     company_id = Column(UUID, ForeignKey("companies.id"), nullable=False)
     name = Column(String, nullable=False)
     address = Column(String)

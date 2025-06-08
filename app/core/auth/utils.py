@@ -53,7 +53,20 @@ def verify_refresh_token(token: str) -> dict:
 
 def verify_google_id_token(id_token_str: str) -> dict:
     try:
-        return id_token.verify_oauth2_token(id_token_str, requests.Request(), settings.GOOGLE_CLIENT_ID)
+        id_info = id_token.verify_oauth2_token(
+            id_token_str, requests.Request(), settings.GOOGLE_CLIENT_ID
+        )
+
+        # aud 확인 (선택적이지만 보안상 강력 추천)
+        if id_info['aud'] != settings.GOOGLE_CLIENT_ID:
+            raise ValueError("잘못된 클라이언트 ID (aud mismatch)")
+
+        # hd 확인 (선택적, GSuite 조직 제한 시 사용)
+        # if id_info.get("hd") != "yourdomain.com":
+        #     raise ValueError("허용되지 않은 도메인입니다")
+
+        return id_info
+
     except Exception:
         return None
 

@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 class Settings(BaseSettings):
     # JWT 설정
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     
     # 데이터베이스 설정
     DATABASE_URL: str
+    TEST_DATABASE_URL: str
     
     model_config = SettingsConfigDict(
         env_file=".env",

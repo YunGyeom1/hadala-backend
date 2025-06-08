@@ -1,35 +1,36 @@
 import pytest
 from fastapi.testclient import TestClient
-from app.user.models import User
-from app.core.auth.utils import create_access_token
-
-@pytest.fixture
-def auth_headers(test_user: User):
-    access_token = create_access_token({"sub": str(test_user.id)})
-    return {"Authorization": f"Bearer {access_token}"}
+from tests.factories import create_user, create_token_pair
 
 
+def test_get_my_info(client: TestClient, db):
+    user = create_user(db)
+    access_token, _ = create_token_pair(user)
+    headers = {"Authorization": f"Bearer {access_token}"}
 
-def test_get_my_info(client: TestClient, test_user: User, auth_headers: dict):
-    response = client.get("/users/me", headers=auth_headers)
+    response = client.get("/users/me", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == str(test_user.id)
-    assert data["email"] == test_user.email
-    assert data["name"] == test_user.name
+    assert data["id"] == str(user.id)
+    assert data["email"] == user.email
+    assert data["name"] == user.name
 
-def test_update_my_info(client: TestClient, test_user: User, auth_headers: dict):
+
+def test_update_my_info(client: TestClient, db):
+    user = create_user(db)
+    access_token, _ = create_token_pair(user)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     update_data = {
         "name": "Updated Name",
     }
-    
+
     response = client.put(
         "/users/me",
-        headers=auth_headers,
+        headers=headers,
         json=update_data
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == update_data["name"]
-

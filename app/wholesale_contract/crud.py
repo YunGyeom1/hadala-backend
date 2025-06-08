@@ -4,24 +4,35 @@ from typing import List, Optional
 from uuid import UUID
 from . import models, schemas
 
-def create_contract(db: Session, contract: schemas.WholesaleContractCreate, company_id: UUID):
+def create_contract(db: Session, contract: schemas.WholesaleContractCreate):
     """새 계약 생성"""
     db_contract = models.WholesaleContract(
-        **contract.dict(exclude={'items'}),
-        company_id=company_id
+        center_id=contract.center_id,
+        wholesaler_id=contract.wholesaler_id,
+        farmer_id=contract.farmer_id,
+        contract_date=contract.contract_date,
+        shipment_date=contract.shipment_date,
+        note=contract.note,
+        total_price=contract.total_price,
+        company_id=contract.company_id  # 주의: client가 넘긴다면 신뢰 가능한가?
     )
     db.add(db_contract)
-    db.flush()  # ID를 얻기 위해 flush
+    db.flush()  # ID 확보
 
-    # 계약 품목 생성
-    for item in contract.items:
-        db_item = models.WholesaleContractItem(**item.dict(), contract_id=db_contract.id)
+    for item in contract.items or []:
+        db_item = models.WholesaleContractItem(
+            crop_name=item.crop_name,
+            quantity_kg=item.quantity_kg,
+            unit_price=item.unit_price,
+            total_price = item.total_price,
+            quality_required=item.quality_required,
+            contract_id=db_contract.id
+        )
         db.add(db_item)
 
     db.commit()
     db.refresh(db_contract)
     return db_contract
-
 def get_contracts(
     db: Session,
     company_id: UUID,
@@ -74,7 +85,7 @@ def update_contract(
             changed_by=contract.farmer_id
         )
     
-    update_data = contract_update.dict(exclude_unset=True)
+    update_data = contract_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(contract, field, value)
     
@@ -149,7 +160,7 @@ def update_contract_item(
     if not contract or contract.contract_status not in [models.ContractStatus.DRAFT, models.ContractStatus.CONFIRMED]:
         return None
 
-    for field, value in item.dict(exclude_unset=True).items():
+    for field, value in item.model_dump(exclude_unset=True).items():
         setattr(db_item, field, value)
 
     db.commit()

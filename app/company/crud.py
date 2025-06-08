@@ -10,7 +10,6 @@ from app.company.models import Company
 from app.wholesaler.models import Wholesaler
 from app.center.models import Center
 from app.user.models import User
-from app.company.models import Company
 
 
 
@@ -53,6 +52,10 @@ def create_company(
     """
     새로운 회사를 생성합니다.
     """
+    wholesaler = db.query(Wholesaler).filter(Wholesaler.user_id == user_id).first()
+    if not wholesaler:
+        raise ValueError("Wholesaler not found for given user_id")
+
     db_company = models.Company(
         name=company.name,
         description=company.description,
@@ -60,7 +63,7 @@ def create_company(
         address=company.address,
         phone=company.phone,
         email=company.email,
-        owner=user_id
+        owner=wholesaler.id
     )
     db.add(db_company)
     db.flush()  # ID를 얻기 위해 flush
@@ -89,7 +92,7 @@ def update_company(
     if not db_company:
         return None
         
-    update_data = company_update.dict(exclude_unset=True)
+    update_data = company_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_company, field, value)
     

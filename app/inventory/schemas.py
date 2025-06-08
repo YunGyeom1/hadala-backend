@@ -20,67 +20,49 @@ class InventoryItem(InventoryItemBase):
     id: UUID
     inventory_id: UUID
     created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-class InventoryBase(BaseModel):
-    date: date
-    company_id: UUID
-    center_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
-class InventoryCreate(InventoryBase):
+class InventoryCreate(BaseModel):
+    date: date
+    center_id: UUID
     items: List[InventoryItemCreate]
 
 class InventoryUpdate(BaseModel):
     date: Optional[date] = None
+    center_id: Optional[UUID] = None
     items: Optional[List[InventoryItemUpdate]] = None
     model_config = ConfigDict(from_attributes=True)
 
-class Inventory(InventoryBase):
+class InventoryFilter(BaseModel):
+    center_id: Optional[UUID] = None
+    date: Optional[date] = None
+    crop_name: Optional[str] = None
+    quality_grade: Optional[str] = None
+
+class Inventory(BaseModel):
     id: UUID
+    date: date
+    center_id: UUID
     created_at: datetime
     updated_at: datetime
     items: List[InventoryItem]
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
 
 class DailySettlementBase(BaseModel):
     date: date
-    company_id: UUID
     center_id: Optional[UUID] = None
     total_wholesale_in_kg: float
+    total_wholesale_in_price: float
     total_retail_out_kg: float
-    wholesale_discrepancy_kg: float
-    retail_discrepancy_kg: float
-    total_inflow_kg: float
-    total_outflow_kg: float
-    net_flow_kg: float
-
-class DailySettlementCreate(DailySettlementBase):
-    pass
-
-class DailySettlementUpdate(BaseModel):
-    total_wholesale_in_kg: Optional[float] = None
-    total_retail_out_kg: Optional[float] = None
-    wholesale_discrepancy_kg: Optional[float] = None
-    retail_discrepancy_kg: Optional[float] = None
-    total_inflow_kg: Optional[float] = None
-    total_outflow_kg: Optional[float] = None
-    net_flow_kg: Optional[float] = None
+    total_retail_out_price: float
+    discrepancy_in_kg: float
+    discrepancy_out_kg: float
+    total_in_kg: float
+    total_out_kg: float
 
 class DailySettlement(DailySettlementBase):
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-class InventoryOut(InventoryBase):
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-    model_config = ConfigDict(from_attributes=True) 
+    id: Optional[UUID]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    model_config = ConfigDict(from_attributes=True)

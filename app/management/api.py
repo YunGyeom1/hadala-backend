@@ -150,7 +150,7 @@ def create_today_settlement(
     current_user  = Depends(get_current_user)
 ):
     """오늘자 결산을 생성합니다."""
-    settlement = crud.create_today_settlement(db, current_user.company_id)
+    settlement = crud.create_today_settlement(db, current_user.wholesaler.company_id)
     if not settlement:
         raise HTTPException(
             status_code=404,
@@ -165,7 +165,7 @@ def create_today_settlement_for_center(
     current_user  = Depends(get_current_user)
 ):
     """특정 센터의 오늘자 결산을 생성합니다."""
-    settlement = crud.create_today_settlement(db, current_user.company_id, center_id)
+    settlement = crud.create_today_settlement(db, current_user.wholesaler.company_id, center_id)
     if not settlement:
         raise HTTPException(
             status_code=404,

@@ -129,7 +129,7 @@ def read_company_wholesalers(
     return wholesalers
 
 
-@router.get("/{company_id}/collection-centers", response_model=List[CenterOut])
+@router.get("/{company_id}/centers", response_model=List[CenterOut])
 def read_company_centers(
     company_id: UUID,
     skip: int = Query(0, ge=0),

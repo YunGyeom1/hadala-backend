@@ -207,29 +207,37 @@ def get_contract_shipment_progress(
         return None
 
     # 계약 품목별 출고 수량 집계
-    shipment_items = db.query(
+    shipment_items = (
+    db.query(
         contract_models.WholesaleContractItem.crop_name,
-        contract_models.WholesaleContractItem.quantity.label('total_quantity'),
+        contract_models.WholesaleContractItem.quantity_kg.label('total_quantity'),
         contract_models.WholesaleContractItem.unit_price,
         contract_models.WholesaleContractItem.total_price,
         func.coalesce(func.sum(models.WholesaleShipmentItem.quantity), 0).label('shipped_quantity')
-    ).outerjoin(
+    )
+    .select_from(contract_models.WholesaleContractItem)
+    .outerjoin(
         models.WholesaleShipment,
         and_(
             models.WholesaleShipment.contract_id == contract_id,
             ~models.WholesaleShipment.is_finalized
         )
-    ).outerjoin(
+    )
+    .outerjoin(
         models.WholesaleShipmentItem,
         models.WholesaleShipmentItem.shipment_id == models.WholesaleShipment.id
-    ).filter(
+    )
+    .filter(
         contract_models.WholesaleContractItem.contract_id == contract_id
-    ).group_by(
+    )
+    .group_by(
         contract_models.WholesaleContractItem.crop_name,
-        contract_models.WholesaleContractItem.quantity,
+        contract_models.WholesaleContractItem.quantity_kg,
         contract_models.WholesaleContractItem.unit_price,
         contract_models.WholesaleContractItem.total_price
-    ).all()
+    )
+    .all()
+    )
 
     items = []
     total_shipped_amount = 0
@@ -254,6 +262,7 @@ def get_contract_shipment_progress(
         total_shipped_amount=total_shipped_amount,
         total_remaining_amount=total_remaining_amount
     )
+
 
 def finalize_shipment(
     db: Session,

@@ -58,15 +58,15 @@ class WholesaleContract(Base):
 class WholesaleContractItem(Base):
     __tablename__ = "wholesale_contract_items"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    contract_id = Column(String(36), ForeignKey("wholesale_contracts.id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    contract_id = Column(UUID(as_uuid=True), ForeignKey("wholesale_contracts.id"), nullable=False)
     crop_name = Column(String(100), nullable=False)
     quantity_kg = Column(Float, nullable=False)
     unit_price = Column(Float, nullable=False)
     total_price = Column(Float, nullable=False)
     quality_required = Column(String(1), nullable=False)  # A, B, C
-    created_at = Column(DateTime, default=datetime.utcnow)
-
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     # Relationships
     contract = relationship("WholesaleContract", back_populates="items")
 

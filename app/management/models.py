@@ -9,10 +9,10 @@ from app.database.base import Base
 class DailySettlement(Base):
     __tablename__ = "daily_settlements"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     date = Column(Date, nullable=False)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
-    center_id = Column(String(36), ForeignKey("collection_centers.id"), nullable=False)
+    center_id = Column(UUID(as_uuid=True), ForeignKey("collection_centers.id"), nullable=False)
 
     # 농가 입고 관련
     total_wholesale_in_kg = Column(Float, default=0)  # 농가 입고량 총합 (kg)

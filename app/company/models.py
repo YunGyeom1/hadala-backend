@@ -15,7 +15,7 @@ class Company(Base):
     ForeignKey("wholesalers.id", use_alter=True, name="fk_companies_wholesalers_owner"),
     nullable=True)
     description = Column(String)
-    business_number = Column(String(20), unique=True, nullable=False)
+    business_number = Column(String(50), unique=True, nullable=False)
     address = Column(String(200), nullable=False)
     phone = Column(String(20), nullable=False)
     email = Column(String(100), nullable=False)

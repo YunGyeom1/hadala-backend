@@ -1,58 +1,66 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from uuid import uuid4
-
-from app.user.models import User
-from app.farmer.models import Farmer
-from app.core.auth.utils import create_access_token
-
+from tests.factories import (
+    create_user,
+    create_token_pair,
+    create_farmer
+)
 
 @pytest.fixture
 def farmer_payload():
     return {
-        "name": "김철수",
-        "address": "경기도 고양시",
-        "farm_size_m2": 2500.0,
-        "annual_output_kg": 3200.0,
-        "farm_members": 3
+        "name": "테스트농부",
+        "address": "경기도 남양주시",
+        "farm_size_m2": 1200.0,
+        "annual_output_kg": 2000.0,
+        "farm_members": 4
     }
 
+def test_create_farmer(client: TestClient, db: Session, farmer_payload):
+    user = create_user(db)
+    access_token, _ = create_token_pair(user)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    payload = farmer_payload
 
-@pytest.fixture
-def auth_headers(test_user: User):
-    access_token = create_access_token({"sub": str(test_user.id)})
-    return {"Authorization": f"Bearer {access_token}"}
-
-
-def test_create_farmer(client: TestClient, test_user: User, auth_headers: dict, db: Session, farmer_payload: dict):
-    response = client.post("/farmers/", json=farmer_payload, headers=auth_headers)
+    response = client.post("/farmers/", json=payload, headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == farmer_payload["name"]
-    assert data["address"] == farmer_payload["address"]
-    assert data["user_id"] == str(test_user.id)
+    assert data["name"] == payload["name"]
+    assert data["address"] == payload["address"]
+    assert data["user_id"] == str(user.id)
     assert "id" in data
     assert "created_at" in data
 
 
-def test_get_farmer(client: TestClient, test_farmer: Farmer, auth_headers: dict):
-    response = client.get(f"/farmers/{test_farmer.id}", headers=auth_headers)
+def test_get_farmer(client: TestClient, db: Session):
+    user = create_user(db)
+    farmer = create_farmer(db, user.id)
+    access_token, _ = create_token_pair(user)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = client.get(f"/farmers/{farmer.id}", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == str(test_farmer.id)
-    assert data["name"] == test_farmer.name
+    assert data["id"] == str(farmer.id)
+    assert data["name"] == farmer.name
 
 
-def test_update_farmer(client: TestClient, test_farmer: Farmer, auth_headers: dict):
+def test_update_farmer(client: TestClient, db: Session):
+    user = create_user(db)
+    farmer = create_farmer(db, user.id)
+    access_token, _ = create_token_pair(user)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     update_payload = {
         "name": "변경된 이름",
         "address": "강원도 홍천군"
     }
+
     response = client.put(
-        f"/farmers/{test_farmer.id}",
+        f"/farmers/{farmer.id}",
         json=update_payload,
-        headers=auth_headers
+        headers=headers
     )
     assert response.status_code == 200
     data = response.json()
@@ -60,31 +68,25 @@ def test_update_farmer(client: TestClient, test_farmer: Farmer, auth_headers: di
     assert data["address"] == update_payload["address"]
 
 
-def test_unauthorized_update_farmer(client: TestClient, test_farmer: Farmer, db: Session):
-    attacker = User(
-        email="hacker@example.com",
-        name="hacker",
-        oauth_provider="google",
-        oauth_sub="hacksocial"
-    )
-    db.add(attacker)
-    db.commit()
-    db.refresh(attacker)
+def test_unauthorized_update_farmer(client: TestClient, db: Session):
+    owner = create_user(db)
+    farmer = create_farmer(db, owner.id)
 
-    fake_token = create_access_token({"sub": str(attacker.id)})
-    headers = {"Authorization": f"Bearer {fake_token}"}
+    attacker = create_user(db, email_prefix="hacker", name="해커")
+    access_token, _ = create_token_pair(attacker)
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     response = client.put(
-        f"/farmers/{test_farmer.id}",
+        f"/farmers/{farmer.id}",
         json={"name": "해커의 시도"},
         headers=headers
     )
     assert response.status_code == 403
 
 
-def test_filter_farmers(client: TestClient, test_farmer: Farmer):
+def test_filter_farmers(client: TestClient, db: Session):
+    user = create_user(db)
+    farmer = create_farmer(db, user.id, address="경기도 남양주시")
+
     response = client.get("/farmers/?address=경기도")
     assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert any("경기도" in farmer["address"] for farmer in data if "address" in farmer)

@@ -17,7 +17,7 @@ def create_shipment(
     current_user  = Depends(get_current_user)
 ):
     """새 출고 기록 생성"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     return crud.create_shipment(db, shipment, company_id)
 
 @router.get("/", response_model=List[schemas.WholesaleShipment])
@@ -32,7 +32,7 @@ def get_shipments(
     end_date: Optional[date] = None
 ):
     """출고 목록 조회"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     return crud.get_shipments(
         db,
         company_id,
@@ -51,7 +51,7 @@ def get_shipment(
     current_user  = Depends(get_current_user)
 ):
     """특정 출고 조회"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     shipment = crud.get_shipment(db, shipment_id, company_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="출고를 찾을 수 없습니다.")
@@ -65,7 +65,7 @@ def update_shipment(
     current_user  = Depends(get_current_user)
 ):
     """출고 정보 수정"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     updated_shipment = crud.update_shipment(db, shipment_id, shipment, company_id)
     if not updated_shipment:
         raise HTTPException(status_code=404, detail="출고를 찾을 수 없거나 수정할 수 없는 상태입니다.")
@@ -78,7 +78,7 @@ def delete_shipment(
     current_user  = Depends(get_current_user)
 ):
     """출고 삭제"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     if not crud.delete_shipment(db, shipment_id, company_id):
         raise HTTPException(status_code=404, detail="출고를 찾을 수 없거나 삭제할 수 없는 상태입니다.")
     return {"message": "출고가 삭제되었습니다."}
@@ -90,7 +90,7 @@ def get_shipment_items(
     current_user  = Depends(get_current_user)
 ):
     """출고 품목 목록 조회"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     items = crud.get_shipment_items(db, shipment_id, company_id)
     if not items:
         raise HTTPException(status_code=404, detail="출고를 찾을 수 없습니다.")
@@ -104,7 +104,7 @@ def update_shipment_item(
     current_user  = Depends(get_current_user)
 ):
     """출고 품목 수정"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     updated_item = crud.update_shipment_item(db, item_id, item, company_id)
     if not updated_item:
         raise HTTPException(status_code=404, detail="품목을 찾을 수 없거나 수정할 수 없는 상태입니다.")
@@ -117,7 +117,7 @@ def delete_shipment_item(
     current_user  = Depends(get_current_user)
 ):
     """출고 품목 삭제"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     if not crud.delete_shipment_item(db, item_id, company_id):
         raise HTTPException(status_code=404, detail="품목을 찾을 수 없거나 삭제할 수 없는 상태입니다.")
     return {"message": "품목이 삭제되었습니다."}
@@ -126,14 +126,23 @@ def delete_shipment_item(
 def get_contract_shipments(
     contract_id: UUID,
     db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """계약에 연결된 출고 목록 조회"""
-    company_id = current_user.wholesale.company_id
-    shipments = crud.get_contract_shipments(db, contract_id, company_id)
-    if not shipments:
+    company_id = current_user.wholesaler.company_id
+
+    # 먼저 계약 존재 여부 확인
+    from app.wholesale_contract.models import WholesaleContract
+    contract = db.query(WholesaleContract).filter(
+        WholesaleContract.id == contract_id,
+        WholesaleContract.company_id == company_id
+    ).first()
+    if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
-    return shipments
+
+    # 출고 목록 조회
+    shipments = crud.get_contract_shipments(db, contract_id, company_id)
+    return shipments  # 출고 없으면 빈 리스트 반환
 
 @router.post("/from-contract/{contract_id}", response_model=schemas.WholesaleShipment)
 def create_shipment_from_contract(
@@ -143,7 +152,7 @@ def create_shipment_from_contract(
     current_user  = Depends(get_current_user)
 ):
     """계약 기준으로 출고 생성"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     new_shipment = crud.create_shipment_from_contract(db, contract_id, shipment, company_id)
     if not new_shipment:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -156,7 +165,7 @@ def get_contract_shipment_progress(
     current_user  = Depends(get_current_user)
 ):
     """계약 품목별 출고 이행 현황 조회"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     progress = crud.get_contract_shipment_progress(db, contract_id, company_id)
     if not progress:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
@@ -169,7 +178,7 @@ def finalize_shipment(
     current_user  = Depends(get_current_user)
 ):
     """출고 완료 처리"""
-    company_id = current_user.wholesale.company_id
+    company_id = current_user.wholesaler.company_id
     shipment = crud.finalize_shipment(db, shipment_id, company_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="출고를 찾을 수 없거나 이미 완료된 상태입니다.")

@@ -8,6 +8,7 @@ class WholesaleContractItemBase(BaseModel):
     quantity_kg: float
     unit_price: float
     quality_required: Optional[str] = None
+    total_price: float
 
 class WholesaleContractItemCreate(WholesaleContractItemBase):
     pass
@@ -43,6 +44,7 @@ class WholesaleContractUpdate(BaseModel):
     note: Optional[str] = None
     shipment_date: Optional[date] = None
     total_price: Optional[float] = None
+    payment_status: Optional[PaymentStatus] = None
     items: Optional[List[WholesaleContractItemCreate]] = None
 
 class WholesaleContract(WholesaleContractBase):

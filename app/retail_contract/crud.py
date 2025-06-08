@@ -5,9 +5,9 @@ from uuid import UUID
 from . import models, schemas
 from .models import ContractStatus, PaymentStatus
 
-def create_contract(db: Session, contract: schemas.RetailContractCreate, company_id: UUID) -> models.RetailContract:
+def create_contract(db: Session, contract: schemas.RetailContractCreate) -> models.RetailContract:
     db_contract = models.RetailContract(
-        company_id=company_id,
+        company_id=contract.company_id,
         retailer_id=contract.retailer_id,
         center_id=contract.center_id,
         wholesaler_id=contract.wholesaler_id,
