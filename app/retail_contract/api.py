@@ -8,7 +8,7 @@ from app.database.session import get_db
 from . import crud, schemas
 from .models import ContractStatus
 
-router = APIRouter()
+router = APIRouter(prefix="/retail-contracts", tags=["retail-contracts"])
 
 @router.post("/", response_model=schemas.RetailContract)
 def create_contract(
@@ -46,7 +46,7 @@ def get_contract(
     db: Session = Depends(get_db),
     current_user  = Depends(get_current_user)
 ):
-    contract = crud.get_contract(db, contract_id, current_user.wholesaler.company_id)
+    contract = crud.get_contract(db, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     return contract
@@ -59,10 +59,10 @@ def update_contract(
     current_user  = Depends(get_current_user)
 ):
     """계약 정보를 업데이트합니다."""
-    contract = crud.get_contract(db, contract_id, current_user.wholesaler.company_id)
+    contract = crud.get_contract(db, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
-    if contract.company_id != current_user.wholesalers.company_id:
+    if contract.company_id != current_user.wholesaler.company_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this contract")
     if contract_update.payment_status and contract_update.payment_status != contract.payment_status:
         crud.create_payment_log(
@@ -114,7 +114,7 @@ def update_contract_item(
     db: Session = Depends(get_db),
     current_user  = Depends(get_current_user)
 ):
-    item = crud.update_contract_item(db, item_id, current_user.wholesaler.company_id, item_update)
+    item = crud.update_contract_item(db, item_id, item_update, current_user.wholesaler.company_id)
     if not item:
         raise HTTPException(status_code=404, detail="Contract item not found")
     return item
@@ -137,7 +137,7 @@ def get_contract_payment_logs(
     db: Session = Depends(get_db),
     current_user  = Depends(get_current_user)
 ):
-    contract = crud.get_contract(db, contract_id, current_user.wholesaler.company_id)
+    contract = crud.get_contract(db, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     if contract.company_id != current_user.wholesaler.company_id:
@@ -153,7 +153,27 @@ def get_payment_log(
     payment_log = crud.get_payment_log(db, log_id)
     if not payment_log:
         raise HTTPException(status_code=404, detail="Payment log not found")
-    contract = crud.get_contract(db, payment_log.contract_id, current_user.wholesaler.company_id)
+    contract = crud.get_contract(db, payment_log.contract_id)
     if contract.company_id != current_user.wholesaler.company_id:
         raise HTTPException(status_code=403, detail="Not authorized to access this payment log")
-    return payment_log 
+    return payment_log
+
+@router.post("/{contract_id}/items", response_model=schemas.RetailContractItem)
+def create_contract_item(
+    contract_id: UUID,
+    item: schemas.RetailContractItemCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    return crud.create_retail_contract_item(db, contract_id, item)
+
+@router.get("/items/{item_id}", response_model=schemas.RetailContractItem)
+def get_contract_item(
+    item_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    item = crud.get_contract_item(db, item_id, current_user.wholesaler.company_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Contract item not found")
+    return item 

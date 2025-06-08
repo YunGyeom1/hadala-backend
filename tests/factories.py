@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from uuid import UUID
 from typing import Optional
 from app.wholesale_contract.models import WholesaleContract, WholesaleContractItem, ContractStatus, PaymentStatus
+from app.retail_contract.models import RetailContract, RetailContractItem
 
 def create_user(
     db: Session,
@@ -235,6 +236,56 @@ def create_wholesale_contract_item(
 ) -> WholesaleContractItem:
     """테스트용 도매 계약 품목을 생성합니다."""
     item = WholesaleContractItem(
+        contract_id=contract_id,
+        crop_name=crop_name,
+        quantity_kg=quantity_kg,
+        unit_price=unit_price,
+        total_price=quantity_kg * unit_price,
+        quality_required=quality_required
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+
+def create_retail_contract(
+    db: Session,
+    company_id,
+    wholesaler_id,
+    retailer_id,
+    center_id,
+    contract_date=None,
+    shipment_date=None,
+    note: str = "기본 비고"
+) -> RetailContract:
+    contract = RetailContract(
+        id=uuid4(),
+        company_id=company_id,
+        wholesaler_id=wholesaler_id,
+        retailer_id=retailer_id,
+        center_id=center_id,
+        contract_date=contract_date or date.today(),
+        shipment_date=shipment_date or date.today(),
+        note=note
+    )
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+    return contract
+
+
+def create_retail_contract_item(
+    db: Session,
+    contract_id,
+    crop_name: str = "감자",
+    quantity_kg: float = 10.0,
+    unit_price: float = 1000.0,
+    quality_required: str = "A"
+) -> RetailContractItem:
+    item = RetailContractItem(
+        id=uuid4(),
         contract_id=contract_id,
         crop_name=crop_name,
         quantity_kg=quantity_kg,

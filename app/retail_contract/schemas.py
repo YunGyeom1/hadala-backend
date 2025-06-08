@@ -38,6 +38,7 @@ class RetailContractBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class RetailContractCreate(RetailContractBase):
+    company_id: UUID4
     items: List[RetailContractItemCreate]
 
 class RetailContractUpdate(BaseModel):
@@ -45,6 +46,7 @@ class RetailContractUpdate(BaseModel):
     note: Optional[str] = None
     shipment_date: Optional[date] = None
     total_price: Optional[float] = None
+    payment_status: Optional[PaymentStatus] = None
     model_config = ConfigDict(from_attributes=True)
 
 class RetailContract(RetailContractBase):
@@ -64,4 +66,13 @@ class RetailContractOut(RetailContractBase):
     id: UUID
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    model_config = ConfigDict(from_attributes=True)
+
+class PaymentLog(BaseModel):
+    id: UUID4
+    contract_id: UUID4
+    changed_at: datetime
+    old_status: PaymentStatus
+    new_status: PaymentStatus
+    changed_by: Optional[UUID4] = None
     model_config = ConfigDict(from_attributes=True) 

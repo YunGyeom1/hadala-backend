@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, ForeignKey, Date, DateTime, Boolean
+from sqlalchemy import Column, String, Float, ForeignKey, Date, DateTime, Boolean, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from uuid import uuid4
@@ -17,6 +17,7 @@ class RetailShipment(Base):
     shipment_date = Column(Date, nullable=False)
     total_price = Column(Float, nullable=True)
     is_finalized = Column(Boolean, default=False)
+    shipment_name = Column(String(100), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -57,11 +57,9 @@ def get_contracts(
     
     return query.offset(skip).limit(limit).all()
 
-def get_contract(db: Session, contract_id: UUID, company_id: Optional[UUID] = None):
+def get_contract(db: Session, contract_id: UUID):
     """특정 계약 조회"""
     query = db.query(models.WholesaleContract).filter(models.WholesaleContract.id == contract_id)
-    if company_id:
-        query = query.filter(models.WholesaleContract.company_id == company_id)
     return query.first()
 
 def update_contract(
@@ -71,7 +69,7 @@ def update_contract(
     company_id: Optional[UUID] = None
 ):
     """계약 정보를 업데이트합니다."""
-    contract = get_contract(db, contract_id, company_id)
+    contract = get_contract(db, contract_id)
     if not contract:
         return None
     
@@ -95,7 +93,7 @@ def update_contract(
 
 def delete_contract(db: Session, contract_id: UUID, company_id: UUID):
     """계약 삭제"""
-    db_contract = get_contract(db, contract_id, company_id)
+    db_contract = get_contract(db, contract_id)
     if not db_contract or db_contract.contract_status != models.ContractStatus.DRAFT:
         return False
     
@@ -110,7 +108,7 @@ def update_contract_status(
     company_id: UUID
 ):
     """계약 상태 업데이트"""
-    db_contract = get_contract(db, contract_id, company_id)
+    db_contract = get_contract(db, contract_id)
     if not db_contract:
         return None
     
@@ -125,7 +123,7 @@ def update_payment_status(
     new_status: models.PaymentStatus,
     company_id: UUID
 ):
-    db_contract = get_contract(db, contract_id, company_id)
+    db_contract = get_contract(db, contract_id)
     if not db_contract:
         return None
     
@@ -140,7 +138,7 @@ def get_contract_items(
     company_id: Optional[UUID] = None
 ):
     """계약 품목 목록 조회"""
-    contract = get_contract(db, contract_id, company_id)
+    contract = get_contract(db, contract_id)
     if not contract:
         return None
     return contract.items
@@ -156,7 +154,7 @@ def update_contract_item(
     if not db_item:
         return None
     
-    contract = get_contract(db, db_item.contract_id, company_id)
+    contract = get_contract(db, db_item.contract_id)
     if not contract or contract.contract_status not in [models.ContractStatus.DRAFT, models.ContractStatus.CONFIRMED]:
         return None
 
@@ -177,7 +175,7 @@ def delete_contract_item(
     if not db_item:
         return False
     
-    contract = get_contract(db, db_item.contract_id, company_id)
+    contract = get_contract(db, db_item.contract_id)
     if not contract or contract.contract_status not in [models.ContractStatus.DRAFT, models.ContractStatus.CONFIRMED]:
         return False
 
@@ -212,7 +210,7 @@ def get_contract_payment_logs(
     limit: int = 100
 ):
     """계약의 결제 상태 변경 로그를 조회합니다."""
-    contract = get_contract(db, contract_id, company_id)
+    contract = get_contract(db, contract_id)
     if not contract:
         return None
 

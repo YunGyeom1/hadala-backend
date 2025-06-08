@@ -31,7 +31,6 @@ class RetailShipmentBase(BaseModel):
     shipment_date: date
     total_price: Optional[float] = None
     shipment_name: str
-    quantity: int
     model_config = ConfigDict(from_attributes=True)
 
 class RetailShipmentCreate(RetailShipmentBase):
@@ -41,7 +40,6 @@ class RetailShipmentUpdate(BaseModel):
     shipment_date: Optional[date] = None
     wholesaler_id: Optional[UUID4] = None
     total_price: Optional[float] = None
-    shipment_name: Optional[str] = None
     quantity: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,6 +59,7 @@ class ShipmentProgress(BaseModel):
     remaining_quantity: float
     unit_price: float
     total_price: float
+    model_config = ConfigDict(from_attributes=True)
 
 class RetailShipmentOut(RetailShipmentBase):
     id: UUID

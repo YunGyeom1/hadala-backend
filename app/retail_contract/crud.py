@@ -59,11 +59,10 @@ def get_contracts(
     
     return query.offset(skip).limit(limit).all()
 
-def get_contract(db: Session, contract_id: UUID, company_id: UUID) -> Optional[models.RetailContract]:
+def get_contract(db: Session, contract_id: UUID) -> Optional[models.RetailContract]:
     return db.query(models.RetailContract).filter(
         and_(
-            models.RetailContract.id == contract_id,
-            models.RetailContract.company_id == company_id
+            models.RetailContract.id == contract_id
         )
     ).first()
 
@@ -86,7 +85,7 @@ def update_contract(
             new_status=contract_update.payment_status
         )
     
-    update_data = contract_update.dict(exclude_unset=True)
+    update_data = contract_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(contract, field, value)
     
@@ -95,7 +94,7 @@ def update_contract(
     return contract
 
 def delete_contract(db: Session, contract_id: UUID, company_id: UUID) -> bool:
-    db_contract = get_contract(db, contract_id, company_id)
+    db_contract = get_contract(db, contract_id)
     if not db_contract or db_contract.contract_status != ContractStatus.DRAFT:
         return False
 
@@ -109,7 +108,7 @@ def update_contract_status(
     company_id: UUID,
     status: ContractStatus
 ) -> Optional[models.RetailContract]:
-    db_contract = get_contract(db, contract_id, company_id)
+    db_contract = get_contract(db, contract_id)
     if not db_contract:
         return None
 
@@ -124,7 +123,7 @@ def update_payment_status(
     company_id: UUID,
     payment_status: PaymentStatus
 ) -> Optional[models.RetailContract]:
-    db_contract = get_contract(db, contract_id, company_id)
+    db_contract = get_contract(db, contract_id)
     if not db_contract:
         return None
 
@@ -147,27 +146,29 @@ def get_contract_items(
         )
     ).all()
 
+def get_contract_item(db: Session, item_id: UUID, company_id: UUID):
+    return db.query(models.RetailContractItem).join(
+        models.RetailContract
+    ).filter(
+        models.RetailContractItem.id == item_id,
+        models.RetailContract.company_id == company_id
+    ).first()
+
 def update_contract_item(
     db: Session,
     item_id: UUID,
-    company_id: UUID,
-    item_update: schemas.RetailContractItemUpdate
+    item_update: schemas.RetailContractItemUpdate,
+    company_id: UUID
 ) -> Optional[models.RetailContractItem]:
-    db_item = db.query(models.RetailContractItem).join(
-        models.RetailContract
-    ).filter(
-        and_(
-            models.RetailContractItem.id == item_id,
-            models.RetailContract.company_id == company_id
-        )
-    ).first()
-
+    """계약 품목 정보를 업데이트합니다."""
+    db_item = get_contract_item(db, item_id, company_id)
     if not db_item:
         return None
-
-    for field, value in item_update.dict(exclude_unset=True).items():
+    
+    update_data = item_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(db_item, field, value)
-
+    
     db.commit()
     db.refresh(db_item)
     return db_item

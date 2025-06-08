@@ -261,4 +261,60 @@ def test_create_today_settlement_for_center(test_setup):
     assert data["date"] == str(today)
     assert data["center_id"] == str(center.id)
     assert "total_wholesale_in_kg" in data
+    assert "total_retail_out_kg" in data
+
+def test_get_center_settlements(test_setup):
+    client = test_setup["client"]
+    center = test_setup["center"]
+    headers = test_setup["headers"]
+    today = date.today()
+
+    # 여러 날짜의 정산 데이터 생성
+    for i in range(3):
+        target_date = today - timedelta(days=i)
+        inventory = create_inventory(test_setup["db"], test_setup["company"].id, center.id, target_date)
+        create_inventory_item(test_setup["db"], inventory.id, f"채소{i}", "A", 10.0)
+        
+        client.post(
+            f"/management/settlements/calculate?center_id={center.id}&target_date={target_date}",
+            headers=headers
+        )
+
+    # 센터별 정산 목록 조회
+    response = client.get(
+        f"/management/settlements/center/{center.id}?start_date={today - timedelta(days=2)}&end_date={today}",
+        headers=headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 3
+    for settlement in data:
+        assert settlement["center_id"] == str(center.id)
+
+def test_get_center_total_settlement(test_setup):
+    client = test_setup["client"]
+    center = test_setup["center"]
+    headers = test_setup["headers"]
+    today = date.today()
+
+    # 정산 데이터 생성
+    inventory = create_inventory(test_setup["db"], test_setup["company"].id, center.id, today)
+    create_inventory_item(test_setup["db"], inventory.id, "상추", "A", 100.0)
+    create_inventory_item(test_setup["db"], inventory.id, "배추", "B", 80.0)
+    
+    settlement = client.post(
+        f"/management/settlements/calculate?center_id={center.id}&target_date={today}",
+        headers=headers
+    ).json()
+
+    # 센터별 특정 일자 정산 조회
+    response = client.get(
+        f"/management/settlements/center/{center.id}/total?target_date={today}",
+        headers=headers
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["date"] == str(today)
+    assert data["center_id"] == str(center.id)
+    assert "total_wholesale_in_kg" in data
     assert "total_retail_out_kg" in data 

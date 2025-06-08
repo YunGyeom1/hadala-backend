@@ -160,14 +160,12 @@ def delete_shipment_item(db: Session, item_id: UUID, company_id: UUID) -> bool:
 
 def get_contract_shipments(
     db: Session,
-    contract_id: UUID,
-    company_id: UUID
+    contract_id: UUID
 ) -> List[models.WholesaleShipment]:
     """계약에 연결된 출고 목록 조회"""
     return db.query(models.WholesaleShipment).filter(
         and_(
-            models.WholesaleShipment.contract_id == contract_id,
-            models.WholesaleShipment.company_id == company_id
+            models.WholesaleShipment.contract_id == contract_id
         )
     ).all()
 
@@ -192,14 +190,12 @@ def create_shipment_from_contract(
 
 def get_contract_shipment_progress(
     db: Session,
-    contract_id: UUID,
-    company_id: UUID
+    contract_id: UUID
 ) -> Optional[schemas.ContractShipmentProgress]:
     """계약 품목별 출고 이행 현황 조회"""
     contract = db.query(contract_models.WholesaleContract).filter(
         and_(
-            contract_models.WholesaleContract.id == contract_id,
-            contract_models.WholesaleContract.company_id == company_id
+            contract_models.WholesaleContract.id == contract_id
         )
     ).first()
 

@@ -141,7 +141,7 @@ def get_contract_shipments(
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
 
     # 출고 목록 조회
-    shipments = crud.get_contract_shipments(db, contract_id, company_id)
+    shipments = crud.get_contract_shipments(db, contract_id)
     return shipments  # 출고 없으면 빈 리스트 반환
 
 @router.post("/from-contract/{contract_id}", response_model=schemas.WholesaleShipment)
@@ -166,7 +166,7 @@ def get_contract_shipment_progress(
 ):
     """계약 품목별 출고 이행 현황 조회"""
     company_id = current_user.wholesaler.company_id
-    progress = crud.get_contract_shipment_progress(db, contract_id, company_id)
+    progress = crud.get_contract_shipment_progress(db, contract_id)
     if not progress:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
     return progress

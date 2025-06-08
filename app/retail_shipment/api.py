@@ -8,7 +8,7 @@ from app.core.auth.utils import get_current_user
 from app.database.session import get_db
 from . import crud, schemas
 
-router = APIRouter()
+router = APIRouter(prefix="/retail-shipments", tags=["retail-shipments"])
 
 @router.post("/", response_model=schemas.RetailShipment)
 def create_shipment(

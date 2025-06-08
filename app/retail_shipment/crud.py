@@ -4,6 +4,7 @@ from typing import List, Optional, Dict
 from uuid import UUID
 from datetime import date
 from . import models, schemas
+from app.retail_contract.models import RetailContract, RetailContractItem
 
 def create_shipment(
     db: Session,
@@ -17,7 +18,8 @@ def create_shipment(
         center_id=shipment.center_id,
         wholesaler_id=shipment.wholesaler_id,
         shipment_date=shipment.shipment_date,
-        total_price=shipment.total_price
+        total_price=shipment.total_price,
+        shipment_name=shipment.shipment_name
     )
     db.add(db_shipment)
     db.flush()
@@ -91,14 +93,18 @@ def update_shipment(
     db.refresh(db_shipment)
     return db_shipment
 
-def delete_shipment(db: Session, shipment_id: UUID, company_id: UUID):
-    db_shipment = get_shipment(db, shipment_id, company_id)
-    if not db_shipment or db_shipment.is_finalized:
-        return False
-
-    db.delete(db_shipment)
+def delete_shipment(
+    db: Session,
+    shipment_id: UUID,
+    company_id: UUID
+):
+    shipment = get_shipment(db, shipment_id, company_id)
+    if not shipment:
+        return None
+    
+    db.delete(shipment)
     db.commit()
-    return True
+    return shipment
 
 def get_shipment_items(
     db: Session,
@@ -204,25 +210,29 @@ def get_shipment_progress(
 ):
     # 계약 품목별 총 수량
     contract_items = db.query(
-        models.RetailContractItem.crop_name,
-        func.sum(models.RetailContractItem.quantity_kg).label('total_quantity'),
-        models.RetailContractItem.unit_price
+        RetailContractItem.crop_name,
+        func.sum(RetailContractItem.quantity_kg).label('total_quantity'),
+        RetailContractItem.unit_price
+    ).join(
+        RetailContract,
+        RetailContractItem.contract_id == RetailContract.id
     ).filter(
         and_(
-            models.RetailContractItem.contract_id == contract_id,
-            models.RetailContract.company_id == company_id
+            RetailContractItem.contract_id == contract_id,
+            RetailContract.company_id == company_id
         )
     ).group_by(
-        models.RetailContractItem.crop_name,
-        models.RetailContractItem.unit_price
+        RetailContractItem.crop_name,
+        RetailContractItem.unit_price
     ).all()
 
-    # 출하된 수량
+    # 출하된 품목별 수량
     shipped_items = db.query(
         models.RetailShipmentItem.crop_name,
         func.sum(models.RetailShipmentItem.quantity_kg).label('shipped_quantity')
     ).join(
-        models.RetailShipment
+        models.RetailShipment,
+        models.RetailShipmentItem.shipment_id == models.RetailShipment.id
     ).filter(
         and_(
             models.RetailShipment.contract_id == contract_id,
@@ -232,20 +242,17 @@ def get_shipment_progress(
         models.RetailShipmentItem.crop_name
     ).all()
 
-    # 결과 계산
-    progress = []
-    for item in contract_items:
-        shipped = next((s for s in shipped_items if s.crop_name == item.crop_name), None)
-        shipped_quantity = shipped.shipped_quantity if shipped else 0
-        remaining_quantity = item.total_quantity - shipped_quantity
-
-        progress.append(schemas.ShipmentProgress(
-            crop_name=item.crop_name,
-            total_quantity=item.total_quantity,
-            shipped_quantity=shipped_quantity,
-            remaining_quantity=remaining_quantity,
-            unit_price=item.unit_price,
-            total_price=item.total_quantity * item.unit_price
-        ))
-
-    return progress 
+    # 결과 매핑
+    shipped_dict = {item.crop_name: item.shipped_quantity for item in shipped_items}
+    
+    return [
+        {
+            "crop_name": item.crop_name,
+            "total_quantity": float(item.total_quantity),
+            "shipped_quantity": float(shipped_dict.get(item.crop_name, 0)),
+            "remaining_quantity": float(item.total_quantity) - float(shipped_dict.get(item.crop_name, 0)),
+            "unit_price": float(item.unit_price),
+            "total_price": float(item.total_quantity) * float(item.unit_price)
+        }
+        for item in contract_items
+    ] 

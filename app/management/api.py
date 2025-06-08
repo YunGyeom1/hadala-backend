@@ -144,19 +144,15 @@ def update_accounting(
         raise HTTPException(status_code=404, detail="Failed to update accounting")
     return updated_accounting
 
-@router.post("/settlements/today", response_model=schemas.DailySettlement)
+@router.post("/settlements/today", response_model=schemas.DailySettlementTotal)
 def create_today_settlement(
     db: Session = Depends(get_db),
     current_user  = Depends(get_current_user)
 ):
-    """오늘자 결산을 생성합니다."""
-    settlement = crud.create_today_settlement(db, current_user.wholesaler.company_id)
-    if not settlement:
-        raise HTTPException(
-            status_code=404,
-            detail="최근 인벤토리 정보를 찾을 수 없습니다."
-        )
-    return settlement
+    """오늘자 전체 결산을 생성합니다."""
+    today = date.today()
+    total = crud.calculate_total_settlement(db, current_user.wholesaler.company_id, today)
+    return total
 
 @router.post("/settlements/today/center/{center_id}", response_model=schemas.DailySettlement)
 def create_today_settlement_for_center(
@@ -171,4 +167,48 @@ def create_today_settlement_for_center(
             status_code=404,
             detail="최근 인벤토리 정보를 찾을 수 없습니다."
         )
-    return settlement 
+    return settlement
+
+@router.get("/settlements/total", response_model=schemas.DailySettlementTotal)
+def get_total_settlement(
+    target_date: date,
+    db: Session = Depends(get_db),
+    current_user  = Depends(get_current_user)
+):
+    """특정 일자의 전체 정산 정보를 조회합니다."""
+    total = crud.calculate_total_settlement(db, current_user.wholesaler.company_id, target_date)
+    return total
+
+@router.get("/settlements/center/{center_id}", response_model=List[schemas.DailySettlement])
+def get_center_settlements(
+    center_id: UUID,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user  = Depends(get_current_user)
+):
+    """특정 센터의 정산 정보 목록을 조회합니다."""
+    company_id = current_user.wholesaler.company_id
+    return crud.get_daily_settlements(
+        db,
+        company_id,
+        center_id=center_id,
+        start_date=start_date,
+        end_date=end_date,
+        skip=skip,
+        limit=limit
+    )
+
+@router.get("/settlements/center/{center_id}/total", response_model=schemas.DailySettlementCenterTotal)
+def get_center_total_settlement(
+    center_id: UUID,
+    target_date: date,
+    db: Session = Depends(get_db),
+    current_user  = Depends(get_current_user)
+):
+    """특정 센터의 특정 일자 정산 정보를 조회합니다."""
+    company_id = current_user.wholesaler.company_id
+    total = crud.calculate_center_total_settlement(db, company_id, center_id, target_date)
+    return total 

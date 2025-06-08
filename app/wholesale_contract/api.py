@@ -51,8 +51,7 @@ def get_contract(
     current_user  = Depends(get_current_user)
 ):
     """특정 계약 조회"""
-    company_id = current_user.wholesaler.company_id
-    contract = crud.get_contract(db, contract_id, company_id)
+    contract = crud.get_contract(db, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
     return schemas.WholesaleContract.model_validate(contract)
@@ -142,7 +141,7 @@ def get_contract_items(
 ):
     """계약 품목 목록 조회"""
     company_id = current_user.wholesaler.company_id
-    items = crud.get_contract_items(db, contract_id, company_id)
+    items = crud.get_contract_items(db, contract_id)
     if items is None:
         raise HTTPException(status_code=404, detail="계약을 찾을 수 없습니다.")
     return [schemas.WholesaleContractItem.model_validate(item) for item in items]
