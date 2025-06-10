@@ -1,19 +1,19 @@
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from app.user.models import User
+from app.users.user.models import User
 from app.core.auth.utils import create_access_token, create_refresh_token
-from app.wholesaler.models import Wholesaler
-from app.company.models import Company
-from app.farmer.models import Farmer
-from app.retailer.models import Retailer
-from app.center.models import Center
-from app.wholesaler.models import Wholesaler
-from app.inventory.models import CompanyCropInventory, CompanyCropInventoryItem
+from app.users.wholesaler.models import Wholesaler
+from app.wholesale_company.company.models import Company
+from app.users.farmer.models import Farmer
+from app.users.retailer.models import Retailer
+from app.wholesale_company.center.models import Center
+from app.users.wholesaler.models import Wholesaler
+from app.wholesale_company.inventory.models import CompanyCropInventory, CompanyCropInventoryItem
 from datetime import date, timedelta
 from uuid import UUID
 from typing import Optional
-from app.wholesale_contract.models import WholesaleContract, WholesaleContractItem, ContractStatus, PaymentStatus
-from app.retail_contract.models import RetailContract, RetailContractItem
+from app.transactions.wholesale_contract.models import WholesaleContract, WholesaleContractItem, ContractStatus, PaymentStatus
+from app.transactions.retail_contract.models import RetailContract, RetailContractItem
 
 def create_user(
     db: Session,

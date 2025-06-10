@@ -95,8 +95,8 @@ def test_create_and_get_shipment_from_contract(test_setup):
 
 def test_list_and_contract_shipments(test_setup):
     # 출고 하나 삽입
-    from app.wholesale_shipment.crud import create_shipment_from_contract
-    from app.wholesale_shipment.schemas import WholesaleShipmentCreate, WholesaleShipmentItemCreate
+    from app.transactions.wholesale_shipment.crud import create_shipment_from_contract
+    from app.transactions.wholesale_shipment.schemas import WholesaleShipmentCreate, WholesaleShipmentItemCreate
 
     item = test_setup["item"]
     contract = test_setup["contract"]

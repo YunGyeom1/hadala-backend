@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from tests.factories import create_user, create_token_pair, create_retailer
-from app.retailer.models import Retailer
+from app.users.retailer.models import Retailer
 from uuid import uuid4
 
 @pytest.fixture

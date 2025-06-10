@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.core.auth import schemas, utils
-from app.user import crud
+from app.core.auth import schemas, utils, crud
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -14,23 +13,28 @@ async def google_login(data: schemas.GoogleOAuthLoginRequest, db: Session = Depe
     if not user_info:
         raise HTTPException(status_code=400, detail="유효하지 않은 ID 토큰입니다")
 
-    user = crud.get_or_create_user_by_oauth(db, user_info)
+    if not user_info.get("email_verified"):
+        raise HTTPException(status_code=400, detail="이메일 인증되지 않은 계정입니다")
+
+    user = crud.get_user_by_oauth(db, provider="google", sub=user_info["sub"])
+    if not user:
+        user = crud.create_user_by_google_oauth(db, user_info)
+
     access_token = utils.create_access_token({"sub": str(user.id)})
     refresh_token = utils.create_refresh_token({"sub": str(user.id)})
 
     return schemas.GoogleOAuthLoginResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
-        user_id=str(user.id)
+        refresh_token=refresh_token
     )
 
-@router.post("/verify", response_model=schemas.VerifyTokenResponse)
-async def verify_access_token(data: schemas.VerifyTokenRequest):
+@router.post("/verify", response_model=schemas.VerifyRefreshTokenResponse)
+async def verify_refresh_token(data: schemas.VerifyRefreshTokenRequest):
     try:
-        token_data = utils.verify_access_token(data.access_token)
-        return schemas.VerifyTokenResponse(valid=True, user_id=token_data["sub"])
+        token_data = utils.verify_refresh_token(data.refresh_token)
+        return schemas.VerifyRefreshTokenResponse(valid=True)
     except Exception as e:
-        return schemas.VerifyTokenResponse(valid=False, error=str(e))
+        return schemas.VerifyRefreshTokenResponse(valid=False, error=str(e))
 
 
 @router.post("/refresh", response_model=schemas.RefreshTokenResponse)

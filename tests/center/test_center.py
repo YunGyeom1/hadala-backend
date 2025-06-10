@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from app.center.models import Center
+from app.wholesale_company.center.models import Center
 from tests.factories import create_user, create_token_pair, create_company, create_wholesaler, create_center
 
 def test_create_center(client: TestClient, db: Session):

@@ -7,10 +7,8 @@ from uuid import UUID
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from app.database.session import get_db
-from app.user.models import User
+from app.users.user.models import User
 from app.core.config import settings
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def create_token(data: dict, expires_delta: timedelta, secret: str, token_type: str) -> str:
     to_encode = data.copy()
@@ -42,7 +40,6 @@ def verify_token(token: str, secret: str, expected_type: str) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-
 def verify_access_token(token: str) -> dict:
     return verify_token(token, settings.SECRET_KEY, "access")
 
@@ -60,15 +57,12 @@ def verify_google_id_token(id_token_str: str) -> dict:
         # aud 확인 (선택적이지만 보안상 강력 추천)
         if id_info['aud'] != settings.GOOGLE_CLIENT_ID:
             raise ValueError("잘못된 클라이언트 ID (aud mismatch)")
-
-        # hd 확인 (선택적, GSuite 조직 제한 시 사용)
-        # if id_info.get("hd") != "yourdomain.com":
-        #     raise ValueError("허용되지 않은 도메인입니다")
-
         return id_info
 
     except Exception:
         return None
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),

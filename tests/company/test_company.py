@@ -54,8 +54,8 @@ def test_create_company(client: TestClient, db: Session):
     assert data["business_number"] == company_data["business_number"]
 
     # 5. DB 확인
-    from app.company.models import Company
-    from app.wholesaler.models import Wholesaler
+    from app.wholesale_company.company.models import Company
+    from app.users.wholesaler.models import Wholesaler
 
     db.expire_all()
     db_company = db.query(Company).filter(Company.id == UUID(data["id"])).first()
