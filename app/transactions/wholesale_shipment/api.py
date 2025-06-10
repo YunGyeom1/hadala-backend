@@ -5,7 +5,7 @@ from uuid import UUID
 from datetime import date
 from app.database.session import get_db
 from app.core.auth.utils import get_current_user
-from app.users.user.models import User
+from app.profile.models import User
 from . import crud, schemas
 
 router = APIRouter(prefix="/wholesale-shipments", tags=["wholesale-shipments"])

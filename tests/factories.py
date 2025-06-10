@@ -1,13 +1,13 @@
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from app.users.user.models import User
+from app.profile.models import User
 from app.core.auth.utils import create_access_token, create_refresh_token
-from app.users.wholesaler.models import Wholesaler
+from app.profiles.wholesaler.models import Wholesaler
 from app.wholesale_company.company.models import Company
-from app.users.farmer.models import Farmer
-from app.users.retailer.models import Retailer
+from app.profiles.farmer.models import Farmer
+from app.profiles.retailer.models import Retailer
 from app.wholesale_company.center.models import Center
-from app.users.wholesaler.models import Wholesaler
+from app.profiles.wholesaler.models import Wholesaler
 from app.wholesale_company.inventory.models import CompanyCropInventory, CompanyCropInventoryItem
 from datetime import date, timedelta
 from uuid import UUID

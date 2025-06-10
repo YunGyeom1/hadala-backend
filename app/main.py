@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from app.users.user.api import router as user_router
-from app.users.farmer.api import router as farmer_router
+from app.profile.api import router as user_router
+from app.profiles.farmer.api import router as farmer_router
 from app.wholesale_company.company.api import router as company_router
 from app.wholesale_company.center.api import router as center_router
-from app.users.wholesaler.api import router as wholesaler_router
-from app.users.retailer.api import router as retailer_router
+from app.profiles.wholesaler.api import router as wholesaler_router
+from app.profiles.retailer.api import router as retailer_router
 from app.transactions.wholesale_contract.api import router as wholesale_contract_router
 from app.transactions.wholesale_shipment.api import router as wholesale_shipment_router
 from app.transactions.retail_contract.api import router as retail_contract_router

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.users.user.models import User
+from app.profile.models import User
 
 
 def get_user_by_oauth(db: Session, provider: str, sub: str) -> User | None:

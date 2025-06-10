@@ -55,7 +55,7 @@ def test_create_company(client: TestClient, db: Session):
 
     # 5. DB 확인
     from app.wholesale_company.company.models import Company
-    from app.users.wholesaler.models import Wholesaler
+    from app.profiles.wholesaler.models import Wholesaler
 
     db.expire_all()
     db_company = db.query(Company).filter(Company.id == UUID(data["id"])).first()

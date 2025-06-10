@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 from app.database.session import get_db
 from app.core.auth.utils import get_current_user
-from app.users.user.models import User
+from app.profile.models import User
 from . import crud, schemas, models
 from .models import ContractStatus, PaymentStatus
 
