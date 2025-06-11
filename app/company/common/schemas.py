@@ -3,14 +3,11 @@ from typing import Optional, List
 from .models import CompanyType
 from app.profile.models import ProfileRole
 
-class CompanyBase(BaseModel):
+class CompanyCreate(BaseModel):
     name: str
     type: CompanyType
 
-class CompanyCreate(CompanyBase):
-    pass
-
-class CompanyUpdate(CompanyBase):
+class CompanyUpdate(BaseModel):
     name: Optional[str] = None
 
 class CompanyResponse(BaseModel):

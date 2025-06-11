@@ -7,6 +7,8 @@ from app.profile.dependencies import get_current_profile
 from app.database.session import get_db
 from app.profile.models import Profile
 from . import schemas, crud
+from app.company.center.crud import create_center, remove_center
+from app.company.center.schemas import CenterCreate, CenterResponse
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -124,7 +126,7 @@ def update_company_owner(
     
     return crud.update_company_owner(db, company_id, owner_update.new_owner_id)
 
-@router.post("/{company_id}/users", response_model=schemas.ProfileResponse)
+@router.post("/{company_id}/users", response_model=ProfileResponse)
 def add_company_user(
     company_id: UUID,
     user_add: schemas.CompanyUserAdd,
@@ -145,57 +147,14 @@ def add_company_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 회사에 대한 사용자 추가 권한이 없습니다"
         )
-    
+    if user_add.role.value != company.type.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="회사 타입과 사용자 역할이 일치하지 않습니다"
+        )
+
     return crud.add_company_user(db, company_id, user_add.profile_id, user_add.role)
 
-@router.post("/{company_id}/centers", response_model=schemas.CompanyResponse)
-def add_company_center(
-    company_id: UUID,
-    center_add: schemas.CompanyCenterAdd,
-    current_profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db)
-):
-    """
-    회사에 센터를 추가합니다.
-    """
-    company = crud.get_company_by_id(db, company_id)
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="회사를 찾을 수 없습니다"
-        )
-    if company.owner_id != current_profile.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 회사에 대한 센터 추가 권한이 없습니다"
-        )
-
-    
-    return crud.add_company_center(db, company_id, center_add.center_id)
-
-@router.delete("/{company_id}/centers/{center_id}", response_model=schemas.CompanyResponse)
-def remove_company_center(
-    company_id: UUID,
-    center_id: UUID,
-    current_profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db)
-):
-    """
-    회사에서 센터를 제거합니다.
-    """
-    company = crud.get_company_by_id(db, company_id)
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="회사를 찾을 수 없습니다"
-        )
-    if company.owner_id != current_profile.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 회사에 대한 센터 제거 권한이 없습니다"
-        )
-    
-    return crud.remove_company_center(db, company_id, center_id)
 
 @router.delete("/{company_id}/users/{user_id}", response_model=schemas.CompanyResponse)
 def remove_company_user(
@@ -220,3 +179,54 @@ def remove_company_user(
         )
     
     return crud.remove_company_user(db, company_id, user_id) 
+
+
+@router.post("/{company_id}/centers", response_model=CenterResponse)
+def add_company_center(
+    company_id: UUID,
+    center_add: CenterCreate,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    회사에 센터를 추가합니다.
+    """
+    company = crud.get_company_by_id(db, company_id)
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="회사를 찾을 수 없습니다"
+        )
+    if company.owner_id != current_profile.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 회사에 대한 센터 추가 권한이 없습니다"
+        )
+
+    
+    return create_center(db, company_id, center_add)
+
+
+#TODO: 집하 기록이 있을 경우 제거 불가, deactivate 처리만 가능
+@router.delete("/{company_id}/centers/{center_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_company_center(
+    company_id: UUID,
+    center_id: UUID,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    회사에서 센터를 제거합니다.
+    """
+    company = crud.get_company_by_id(db, company_id)
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="회사를 찾을 수 없습니다"
+        )
+    if company.owner_id != current_profile.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 회사에 대한 센터 제거 권한이 없습니다"
+        )
+    return remove_center(db, center_id)

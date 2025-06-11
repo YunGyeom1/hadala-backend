@@ -1,44 +1,60 @@
-from sqlalchemy import Column, String, Float, ForeignKey, Date, DateTime, Boolean, Integer
+from datetime import datetime
+import uuid
+from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Enum, func, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from uuid import uuid4
-from datetime import datetime
+
 from app.database.base import Base
+from app.transactions.common.models import PaymentStatus, ShipmentStatus, ProductQuality
 
 class RetailShipment(Base):
     __tablename__ = "retail_shipments"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    retailer_id = Column(UUID(as_uuid=True), ForeignKey("retailers.id"), nullable=False)
-    contract_id = Column(UUID(as_uuid=True), ForeignKey("retail_contracts.id"), nullable=False)
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
-    center_id = Column(UUID(as_uuid=True), ForeignKey("collection_centers.id"), nullable=False)
-    wholesaler_id = Column(UUID(as_uuid=True), ForeignKey("wholesalers.id"), nullable=True)
-    shipment_date = Column(Date, nullable=False)
-    total_price = Column(Float, nullable=True)
-    is_finalized = Column(Boolean, default=False)
-    shipment_name = Column(String(100), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    contract_id = Column(UUID(as_uuid=True, index=True), ForeignKey("retailcontracts.id"), nullable=False)
+    title = Column(String, nullable=False)
+    creator_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"), nullable=False)
+    supplier_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
+    supplier_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
+    receiver_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
+    receiver_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
+    shipment_datetime = Column(DateTime(timezone=True))
+    departure_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
+    arrival_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
+    total_price = Column(Float, nullable=False)
+    payment_due_date = Column(DateTime(timezone=True))
+    shipment_status = Column(Enum(ShipmentStatus), nullable=False, default=ShipmentStatus.PENDING)
+    payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
+    notes = Column(String)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    retailer = relationship("Retailer", back_populates="shipments")
+    # Relationships
     contract = relationship("RetailContract", back_populates="shipments")
-    company = relationship("Company", back_populates="retail_shipments")
-    center = relationship("Center", back_populates="retail_shipments")
-    wholesaler = relationship("Wholesaler", back_populates="retail_shipments")
+    creator = relationship("Profile", foreign_keys=[creator_id])
+    supplier_person = relationship("Profile", foreign_keys=[supplier_person_id])
+    supplier_company = relationship("Company", foreign_keys=[supplier_company_id])
+    receiver_person = relationship("Profile", foreign_keys=[receiver_person_id])
+    receiver_company = relationship("Company", foreign_keys=[receiver_company_id])
+    departure_center = relationship("Center", foreign_keys=[departure_center_id])
+    arrival_center = relationship("Center", foreign_keys=[arrival_center_id])
     items = relationship("RetailShipmentItem", back_populates="shipment", cascade="all, delete-orphan")
 
 class RetailShipmentItem(Base):
     __tablename__ = "retail_shipment_items"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    shipment_id = Column(UUID(as_uuid=True), ForeignKey("retail_shipments.id"), nullable=False)
-    crop_name = Column(String(100), nullable=False)
-    quantity_kg = Column(Float, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    shipment_id = Column(UUID(as_uuid=True, index=True), ForeignKey("retail_shipments.id"), nullable=False)
+    product_name = Column(String, nullable=False)
+    quality = Column(Enum(ProductQuality), nullable=False)
+    quantity = Column(Integer, nullable=False)
     unit_price = Column(Float, nullable=False)
     total_price = Column(Float, nullable=False)
-    quality_grade = Column(String(50), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    shipment = relationship("RetailShipment", back_populates="items") 
+    # Relationships
+    shipment = relationship("RetailShipment", back_populates="items")
+    

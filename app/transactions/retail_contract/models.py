@@ -1,85 +1,69 @@
-from sqlalchemy import Column, String, Float, Date, ForeignKey, DateTime, Enum
+from sqlalchemy import Column, String, Float, ForeignKey, DateTime, Enum, JSON, Integer, Index
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app.database.base import Base
 import uuid
-import enum
-from datetime import datetime
+from app.transactions.common.models import ContractStatus, PaymentStatus, ProductQuality
 
-class ContractStatus(str, enum.Enum):
-    DRAFT = "draft"
-    CONFIRMED = "confirmed"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-
-class PaymentStatus(str, enum.Enum):
-    PREPAID = "prepaid"
-    PRE_RECEIVED = "pre-received"
-    PAID = "paid"
-    RECEIVED = "received"
-    PENDING_PAYMENT = "pending_payment"
-    PENDING_RECEIPT = "pending_receipt"
-    PENDING = "pending"
-    PARTIALLY_PAID = "partially_paid"
-    OVERDUE = "overdue"
-    CANCELLED = "cancelled"
-
-class RetailContract(Base):
-    __tablename__ = "retail_contracts"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    retailer_id = Column(UUID(as_uuid=True), ForeignKey("retailers.id"), nullable=False)
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
-    center_id = Column(UUID(as_uuid=True), ForeignKey("collection_centers.id"), nullable=False)
-    wholesaler_id = Column(UUID(as_uuid=True), ForeignKey("wholesalers.id"), nullable=False)
-    contract_date = Column(DateTime, nullable=False)
-    contract_status = Column(Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT)
-    note = Column(String(500))
-    shipment_date = Column(Date, nullable=False)
-    total_price = Column(Float)
-    payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # 관계
-    retailer = relationship("Retailer", back_populates="retail_contracts")
-    company = relationship("Company", back_populates="retail_contracts")
-    center = relationship("Center", back_populates="retail_contracts")
-    wholesaler = relationship("Wholesaler", back_populates="retail_contracts")
-    items = relationship("RetailContractItem", back_populates="contract", cascade="all, delete-orphan")
-    shipments = relationship("RetailShipment", back_populates="contract")
-    payment_logs = relationship("RetailContractPaymentLog", back_populates="contract")
 
 class RetailContractItem(Base):
     __tablename__ = "retail_contract_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     contract_id = Column(UUID(as_uuid=True), ForeignKey("retail_contracts.id"), nullable=False)
-    crop_name = Column(String(100), nullable=False)
-    quantity_kg = Column(Float, nullable=False)
-    unit_price = Column(Float, nullable=False)
-    total_price = Column(Float, nullable=False)
-    quality_required = Column(String(1), nullable=False)  # A, B, C
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    product_name = Column(String, nullable=False)  # 작물명
+    quality = Column(Enum(ProductQuality), nullable=False)  # 퀄리티
+    quantity = Column(Float, nullable=False)  # 양
+    unit_price = Column(Float, nullable=False)  # 단위가격
+    total_price = Column(Float, nullable=False)  # 총 가격
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
     # Relationships
     contract = relationship("RetailContract", back_populates="items")
 
-class RetailContractPaymentLog(Base):
-    __tablename__ = "retail_contract_payment_logs"
+    # Indexes
+    __table_args__ = (
+        Index('ix_retail_contract_items_contract_id', 'contract_id'),
+    )
+
+class RetailContract(Base):
+    __tablename__ = "retail_contracts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    contract_id = Column(UUID(as_uuid=True), ForeignKey("retail_contracts.id"), nullable=False)
-    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    old_status = Column(Enum(PaymentStatus), nullable=False)
-    new_status = Column(Enum(PaymentStatus), nullable=False)
-    changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    title = Column(String, nullable=False)
+    creator_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False)
+    supplier_contractor_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
+    supplier_company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
+    receiver_contractor_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
+    receiver_company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
+    delivery_datetime = Column(DateTime(timezone=True))
+    delivery_location = Column(String)
+    total_price = Column(Float, nullable=False)
+    payment_due_date = Column(DateTime(timezone=True))
+    contract_status = Column(Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT)
+    payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
+    notes = Column(String, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
-    contract = relationship("RetailContract", back_populates="payment_logs")
-    user = relationship("User") 
+    supplier_contractor = relationship("Profile", foreign_keys=[supplier_contractor_id])
+    supplier_company = relationship("Company", foreign_keys=[supplier_company_id])
+    receiver_contractor = relationship("Profile", foreign_keys=[receiver_contractor_id])
+    receiver_company = relationship("Company", foreign_keys=[receiver_company_id])
+    next_contract = relationship("RetailContract", remote_side=[id], backref="previous_contract")
+    items = relationship("RetailContractItem", back_populates="contract", cascade="all, delete-orphan")
+    creator = relationship("Profile", foreign_keys=[creator_id])
+
+    # Indexes
+    __table_args__ = (
+        Index('ix_retail_contracts_creator_id', 'creator_id'),
+        Index('ix_retail_contracts_supplier_contractor_id', 'supplier_contractor_id'),
+        Index('ix_retail_contracts_supplier_company_id', 'supplier_company_id'),
+        Index('ix_retail_contracts_receiver_contractor_id', 'receiver_contractor_id'),
+        Index('ix_retail_contracts_receiver_company_id', 'receiver_company_id'),
+    ) 

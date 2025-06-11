@@ -1,179 +1,168 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
 from uuid import UUID
-
-from app.core.auth.utils import get_current_user
+from typing import List
 from app.database.session import get_db
+from app.profile.dependencies import get_current_profile
+from app.profile.models import Profile
 from . import crud, schemas
-from .models import ContractStatus
+from app.transactions.common.permissions import check_contract_access
+from app.transactions.common import schemas as common_schemas
 
 router = APIRouter(prefix="/retail-contracts", tags=["retail-contracts"])
 
-@router.post("/", response_model=schemas.RetailContract)
-def create_contract(
-    contract: schemas.RetailContractCreate,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
+@router.post("/", response_model=schemas.RetailContractResponse)
+def create_retail_contract(
+    contract_create: schemas.RetailContractCreate,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
 ):
-    return crud.create_contract(db, contract)
+    """
+    새로운 소매 계약을 생성합니다.
+    """
+    if not current_profile.company_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="회사 소속이 아닙니다"
+        )
+    
+    return crud.create_retail_contract(db, contract_create, current_profile.id)
 
-@router.get("/", response_model=List[schemas.RetailContract])
-def get_contracts(
-    status: Optional[ContractStatus] = None,
-    retailer_id: Optional[UUID] = None,
-    center_id: Optional[UUID] = None,
-    wholesaler_id: Optional[UUID] = None,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
+@router.get("/search", response_model=schemas.PaginatedResponse)
+def search_retail_contracts(
+    search_params: schemas.RetailContractSearch = Depends(),
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
 ):
-    return crud.get_contracts(
-        db,
-        current_user.wholesaler.company_id,
-        status=status,
-        retailer_id=retailer_id,
-        center_id=center_id,
-        wholesaler_id=wholesaler_id,
-        skip=skip,
-        limit=limit
+    """
+    소매 계약을 검색합니다.
+    """
+    if not current_profile.company_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="회사 소속이 아닙니다"
+        )
+    
+    contracts, total = crud.search_retail_contracts(db, search_params, current_profile.company_id)
+    return schemas.PaginatedResponse.create(
+        items=contracts,
+        total=total,
+        page=search_params.page,
+        page_size=search_params.page_size
     )
 
-@router.get("/{contract_id}", response_model=schemas.RetailContract)
-def get_contract(
+@router.get("/{contract_id}", response_model=schemas.RetailContractResponse)
+def get_retail_contract(
     contract_id: UUID,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
 ):
-    contract = crud.get_contract(db, contract_id)
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
+    """
+    특정 소매 계약을 조회합니다.
+    """
+    contract = check_contract_access(db, contract_id, current_profile, require_ownership=False)
     return contract
 
-@router.put("/{contract_id}", response_model=schemas.RetailContract)
-def update_contract(
+@router.get("/{contract_id}/items", response_model=List[schemas.RetailContractItemResponse])
+def get_contract_items(
+    contract_id: UUID,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    계약의 아이템 리스트를 조회합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=False)
+    return crud.get_retail_contract_items(db, contract_id)
+
+@router.get("/{contract_id}/chain", response_model=List[schemas.RetailContractResponse])
+def get_contract_chain(
+    contract_id: UUID,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    연속 계약 리스트를 조회합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=False)
+    return crud.get_contract_chain(db, contract_id)
+
+@router.put("/{contract_id}", response_model=schemas.RetailContractResponse)
+def update_retail_contract(
     contract_id: UUID,
     contract_update: schemas.RetailContractUpdate,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
 ):
-    """계약 정보를 업데이트합니다."""
-    contract = crud.get_contract(db, contract_id)
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    if contract.company_id != current_user.wholesaler.company_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this contract")
-    if contract_update.payment_status and contract_update.payment_status != contract.payment_status:
-        crud.create_payment_log(
-            db=db,
-            contract_id=contract_id,
-            old_status=contract.payment_status,
-            new_status=contract_update.payment_status,
-            changed_by=current_user.id
-        )
-    updated_contract = crud.update_contract(db, contract_id, contract_update)
-    if not updated_contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
+    """
+    소매 계약을 수정합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=True)
+    updated_contract = crud.update_retail_contract(db, contract_id, contract_update)
+    return updated_contract
+
+@router.patch("/{contract_id}/status", response_model=schemas.RetailContractResponse)
+def update_contract_status(
+    contract_id: UUID,
+    status_update: common_schemas.ContractStatusUpdate,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    계약 상태를 변경합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=True)
+    updated_contract = crud.update_retail_contract_status(db, contract_id, status_update)
+    return updated_contract
+
+@router.patch("/{contract_id}/payment-status", response_model=schemas.RetailContractResponse)
+def update_payment_status(
+    contract_id: UUID,
+    status_update: common_schemas.PaymentStatusUpdate,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    결제 상태를 변경합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=True)
+    updated_contract = crud.update_retail_contract_payment_status(db, contract_id, status_update)
+
     return updated_contract
 
 @router.delete("/{contract_id}")
-def delete_contract(
+def delete_retail_contract(
     contract_id: UUID,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
 ):
-    if not crud.delete_contract(db, contract_id, current_user.wholesaler.company_id):
-        raise HTTPException(status_code=404, detail="Contract not found or cannot be deleted")
-    return {"message": "Contract deleted successfully"}
+    """
+    소매 계약을 삭제합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=True)
+    if not crud.delete_retail_contract(db, contract_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="계약 삭제에 실패했습니다"
+        )
 
-@router.put("/{contract_id}/status", response_model=schemas.RetailContract)
-def update_contract_status(
-    contract_id: UUID,
-    status: ContractStatus,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
-):
-    contract = crud.update_contract_status(db, contract_id, current_user.wholesaler.company_id, status)
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    return contract
+    return {"message": "계약이 삭제되었습니다"}
 
-@router.get("/{contract_id}/items", response_model=List[schemas.RetailContractItem])
-def get_contract_items(
-    contract_id: UUID,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
-):
-    return crud.get_contract_items(db, contract_id, current_user.wholesaler.company_id)
-
-@router.put("/items/{item_id}", response_model=schemas.RetailContractItem)
-def update_contract_item(
-    item_id: UUID,
-    item_update: schemas.RetailContractItemUpdate,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
-):
-    item = crud.update_contract_item(db, item_id, item_update, current_user.wholesaler.company_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Contract item not found")
-    return item
-
-@router.delete("/items/{item_id}")
+@router.delete("/{contract_id}/items/{item_id}")
 def delete_contract_item(
-    item_id: UUID,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
-):
-    if not crud.delete_contract_item(db, item_id, current_user.wholesaler.company_id):
-        raise HTTPException(status_code=404, detail="Contract item not found")
-    return {"message": "Contract item deleted successfully"}
-
-@router.get("/{contract_id}/payment-logs", response_model=List[schemas.PaymentLog])
-def get_contract_payment_logs(
     contract_id: UUID,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
-):
-    contract = crud.get_contract(db, contract_id)
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    if contract.company_id != current_user.wholesaler.company_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this contract")
-    return crud.get_contract_payment_logs(db, contract_id, skip, limit)
-
-@router.get("/payment-logs/{log_id}", response_model=schemas.PaymentLog)
-def get_payment_log(
-    log_id: UUID,
-    db: Session = Depends(get_db),
-    current_user  = Depends(get_current_user)
-):
-    payment_log = crud.get_payment_log(db, log_id)
-    if not payment_log:
-        raise HTTPException(status_code=404, detail="Payment log not found")
-    contract = crud.get_contract(db, payment_log.contract_id)
-    if contract.company_id != current_user.wholesaler.company_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this payment log")
-    return payment_log
-
-@router.post("/{contract_id}/items", response_model=schemas.RetailContractItem)
-def create_contract_item(
-    contract_id: UUID,
-    item: schemas.RetailContractItemCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    return crud.create_retail_contract_item(db, contract_id, item)
-
-@router.get("/items/{item_id}", response_model=schemas.RetailContractItem)
-def get_contract_item(
     item_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
 ):
-    item = crud.get_contract_item(db, item_id, current_user.wholesaler.company_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Contract item not found")
-    return item 
+    """
+    계약의 특정 아이템을 삭제합니다.
+    """
+    check_contract_access(db, contract_id, current_profile, require_ownership=True)
+    if not crud.delete_retail_contract_item(db, contract_id, item_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="아이템 삭제에 실패했습니다"
+        )
+    
+    return {"message": "아이템이 삭제되었습니다"} 

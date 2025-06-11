@@ -1,118 +1,224 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc
-from typing import List, Optional
+from sqlalchemy import and_, or_
 from uuid import UUID
+from typing import List, Optional, Tuple
+from datetime import datetime, date
 from . import models, schemas
+from app.profile.crud import get_profile
+from app.transactions.common import schemas as common_schemas
 
-def create_contract(db: Session, contract: schemas.WholesaleContractCreate):
-    """새 계약 생성"""
+def create_wholesale_contract(
+    db: Session,
+    contract_create: schemas.WholesaleContractCreate,
+    creator_id: UUID
+) -> models.WholesaleContract:
+    """
+    새로운 도매 계약을 생성합니다.
+    """
+    # 계약 생성
     db_contract = models.WholesaleContract(
-        center_id=contract.center_id,
-        wholesaler_id=contract.wholesaler_id,
-        farmer_id=contract.farmer_id,
-        contract_date=contract.contract_date,
-        shipment_date=contract.shipment_date,
-        note=contract.note,
-        total_price=contract.total_price,
-        company_id=contract.company_id  # 주의: client가 넘긴다면 신뢰 가능한가?
+        title=contract_create.title,
+        supplier_contractor_id=contract_create.supplier_contractor_id,
+        supplier_company_id=contract_create.supplier_company_id,
+        receiver_contractor_id=contract_create.receiver_contractor_id,
+        receiver_company_id=contract_create.receiver_company_id,
+        delivery_datetime=contract_create.delivery_datetime,
+        delivery_location=contract_create.delivery_location,
+        payment_due_date=contract_create.payment_due_date,
+        notes=contract_create.notes,
+        creator_id=creator_id
     )
     db.add(db_contract)
-    db.flush()  # ID 확보
+    db.flush()  # ID 생성을 위해 flush
 
-    for item in contract.items or []:
+    # 아이템 생성
+    total_price = 0
+    for item in contract_create.items:
+        item_total = item.quantity * item.unit_price
+        total_price += item_total
+        
         db_item = models.WholesaleContractItem(
-            crop_name=item.crop_name,
-            quantity_kg=item.quantity_kg,
+            contract_id=db_contract.id,
+            product_name=item.product_name,
+            quality=item.quality,
+            quantity=item.quantity,
             unit_price=item.unit_price,
-            total_price = item.total_price,
-            quality_required=item.quality_required,
-            contract_id=db_contract.id
+            total_price=item_total
         )
         db.add(db_item)
+    
+    db_contract.total_price = total_price
+    db.commit()
+    db.refresh(db_contract)
+    return db_contract
+
+def get_wholesale_contract(
+    db: Session,
+    contract_id: UUID
+) -> Optional[models.WholesaleContract]:
+    """
+    ID로 도매 계약을 조회합니다.
+    """
+    return db.query(models.WholesaleContract).filter(models.WholesaleContract.id == contract_id).first()
+
+def search_wholesale_contracts(
+    db: Session,
+    search_params: schemas.WholesaleContractSearch,
+    current_company_id: UUID
+) -> Tuple[List[models.WholesaleContract], int]:
+    """
+    도매 계약을 검색합니다.
+    """
+    query = db.query(models.WholesaleContract).filter(
+        or_(
+            models.WholesaleContract.supplier_company_id == current_company_id,
+            models.WholesaleContract.receiver_company_id == current_company_id
+        )
+    )
+
+    if search_params.title:
+        query = query.filter(models.WholesaleContract.title.ilike(f"%{search_params.title}%"))
+    
+    if search_params.start_date:
+        query = query.filter(models.WholesaleContract.contract_date >= search_params.start_date)
+    
+    if search_params.end_date:
+        query = query.filter(models.WholesaleContract.contract_date <= search_params.end_date)
+    
+    if search_params.supplier_company_id:
+        query = query.filter(models.WholesaleContract.supplier_company_id == search_params.supplier_company_id)
+    
+    if search_params.receiver_company_id:
+        query = query.filter(models.WholesaleContract.receiver_company_id == search_params.receiver_company_id)
+    
+    if search_params.status:
+        query = query.filter(models.WholesaleContract.status == search_params.status)
+    
+    if search_params.payment_status:
+        query = query.filter(models.WholesaleContract.payment_status == search_params.payment_status)
+
+    # 전체 개수 계산
+    total = query.count()
+
+    # 정렬
+    if search_params.sort_by:
+        sort_column = getattr(models.WholesaleContract, search_params.sort_by)
+        if search_params.sort_desc:
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(models.WholesaleContract.created_at.desc())
+
+    # 페이지네이션
+    query = query.offset((search_params.page - 1) * search_params.page_size)
+    query = query.limit(search_params.page_size)
+
+    return query.all(), total
+
+def get_contract_items(
+    db: Session,
+    contract_id: UUID
+) -> List[models.WholesaleContractItem]:
+    """
+    계약의 아이템 리스트를 조회합니다.
+    """
+    return db.query(models.WholesaleContractItem).filter(
+        models.WholesaleContractItem.contract_id == contract_id
+    ).all()
+
+def get_contract_chain(
+    db: Session,
+    contract_id: UUID,
+    limit: int = 50
+) -> List[models.WholesaleContract]:
+    """
+    연속 계약 리스트를 조회합니다.
+    """
+    # 현재 계약 조회
+    current_contract = get_wholesale_contract(db, contract_id)
+    if not current_contract:
+        return []
+
+    prev_contracts = []
+    current = current_contract
+    for _ in range((limit - 1) // 2):
+        if not current.previous_contract:
+            break
+        current = current.previous_contract
+        prev_contracts.append(current)
+
+    next_contracts = []
+    current = current_contract
+    for _ in range(limit//2):
+        if not current.next_contract_id:
+            break
+        current = get_wholesale_contract(db, current.next_contract_id)
+        if not current:
+            break
+        next_contracts.append(current)
+
+    return prev_contracts[::-1] + [current_contract] + next_contracts
+
+def update_wholesale_contract(
+    db: Session,
+    contract_id: UUID,
+    contract_update: schemas.WholesaleContractUpdate
+) -> Optional[models.WholesaleContract]:
+    """
+    도매 계약을 수정합니다.
+    """
+    db_contract = get_wholesale_contract(db, contract_id)
+    if not db_contract:
+        return None
+
+    # 기본 정보 업데이트
+    update_data = contract_update.model_dump(exclude_unset=True, exclude={'items'})
+    for field, value in update_data.items():
+        setattr(db_contract, field, value)
+
+    # 아이템 업데이트
+    if contract_update.items is not None:
+        # 기존 아이템 삭제
+        db.query(models.WholesaleContractItem).filter(
+            models.WholesaleContractItem.contract_id == contract_id
+        ).delete()
+
+        # 새 아이템 추가
+        total_price = 0
+        for item in contract_update.items:
+            item_total = item.quantity * item.unit_price
+            total_price += item_total
+            
+            db_item = models.WholesaleContractItem(
+                contract_id=contract_id,
+                product_name=item.product_name,
+                quality=item.quality,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item_total
+            )
+            db.add(db_item)
+        
+        db_contract.total_price = total_price
 
     db.commit()
     db.refresh(db_contract)
     return db_contract
-def get_contracts(
-    db: Session,
-    company_id: UUID,
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[models.ContractStatus] = None,
-    center_id: Optional[UUID] = None,
-    wholesaler_id: Optional[UUID] = None,
-    farmer_id: Optional[UUID] = None
-):
-    """계약 목록 조회"""
-    query = db.query(models.WholesaleContract).filter(models.WholesaleContract.company_id == company_id)
-    
-    if status:
-        query = query.filter(models.WholesaleContract.contract_status == status)
-    if center_id:
-        query = query.filter(models.WholesaleContract.center_id == center_id)
-    if wholesaler_id:
-        query = query.filter(models.WholesaleContract.wholesaler_id == wholesaler_id)
-    if farmer_id:
-        query = query.filter(models.WholesaleContract.farmer_id == farmer_id)
-    
-    return query.offset(skip).limit(limit).all()
-
-def get_contract(db: Session, contract_id: UUID):
-    """특정 계약 조회"""
-    query = db.query(models.WholesaleContract).filter(models.WholesaleContract.id == contract_id)
-    return query.first()
-
-def update_contract(
-    db: Session,
-    contract_id: UUID,
-    contract_update: schemas.WholesaleContractUpdate,
-    company_id: Optional[UUID] = None
-):
-    """계약 정보를 업데이트합니다."""
-    contract = get_contract(db, contract_id)
-    if not contract:
-        return None
-    
-    # 결제 상태가 변경되는 경우 로그 생성
-    if contract_update.payment_status and contract_update.payment_status != contract.payment_status:
-        create_payment_log(
-            db=db,
-            contract_id=contract_id,
-            old_status=contract.payment_status,
-            new_status=contract_update.payment_status,
-            changed_by=contract.farmer_id
-        )
-    
-    update_data = contract_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(contract, field, value)
-    
-    db.commit()
-    db.refresh(contract)
-    return contract
-
-def delete_contract(db: Session, contract_id: UUID, company_id: UUID):
-    """계약 삭제"""
-    db_contract = get_contract(db, contract_id)
-    if not db_contract or db_contract.contract_status != models.ContractStatus.DRAFT:
-        return False
-    
-    db.delete(db_contract)
-    db.commit()
-    return True
 
 def update_contract_status(
     db: Session,
     contract_id: UUID,
-    new_status: models.ContractStatus,
-    company_id: UUID
-):
-    """계약 상태 업데이트"""
-    db_contract = get_contract(db, contract_id)
+    status: common_schemas.ContractStatusUpdate
+) -> Optional[models.WholesaleContract]:
+    """
+    계약 상태를 변경합니다.
+    """
+    db_contract = get_wholesale_contract(db, contract_id)
     if not db_contract:
         return None
-    
-    db_contract.contract_status = new_status
+
+    db_contract.contract_status = status.status
     db.commit()
     db.refresh(db_contract)
     return db_contract
@@ -120,118 +226,55 @@ def update_contract_status(
 def update_payment_status(
     db: Session,
     contract_id: UUID,
-    new_status: models.PaymentStatus,
-    company_id: UUID
-):
-    db_contract = get_contract(db, contract_id)
+    status: common_schemas.PaymentStatusUpdate
+) -> Optional[models.WholesaleContract]:
+    """
+    결제 상태를 변경합니다.
+    """
+    db_contract = get_wholesale_contract(db, contract_id)
     if not db_contract:
         return None
-    
-    db_contract.payment_status = new_status
+
+    db_contract.payment_status = status.status
     db.commit()
     db.refresh(db_contract)
     return db_contract
 
-def get_contract_items(
+def delete_wholesale_contract(
     db: Session,
-    contract_id: UUID,
-    company_id: Optional[UUID] = None
-):
-    """계약 품목 목록 조회"""
-    contract = get_contract(db, contract_id)
-    if not contract:
-        return None
-    return contract.items
-
-def update_contract_item(
-    db: Session,
-    item_id: UUID,
-    item: schemas.WholesaleContractItemUpdate,
-    company_id: UUID
-):
-    """계약 품목 수정"""
-    db_item = db.query(models.WholesaleContractItem).filter(models.WholesaleContractItem.id == item_id).first()
-    if not db_item:
-        return None
-    
-    contract = get_contract(db, db_item.contract_id)
-    if not contract or contract.contract_status not in [models.ContractStatus.DRAFT, models.ContractStatus.CONFIRMED]:
-        return None
-
-    for field, value in item.model_dump(exclude_unset=True).items():
-        setattr(db_item, field, value)
-
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-def delete_contract_item(
-    db: Session,
-    item_id: UUID,
-    company_id: UUID
-):
-    """계약 품목 삭제"""
-    db_item = db.query(models.WholesaleContractItem).filter(models.WholesaleContractItem.id == item_id).first()
-    if not db_item:
-        return False
-    
-    contract = get_contract(db, db_item.contract_id)
-    if not contract or contract.contract_status not in [models.ContractStatus.DRAFT, models.ContractStatus.CONFIRMED]:
+    contract_id: UUID
+) -> bool:
+    """
+    도매 계약을 삭제합니다.
+    """
+    db_contract = get_wholesale_contract(db, contract_id)
+    if not db_contract:
         return False
 
-    db.delete(db_item)
+    db.delete(db_contract)
     db.commit()
     return True
 
-def create_payment_log(
+def delete_contract_item(
     db: Session,
     contract_id: UUID,
-    old_status: models.PaymentStatus,
-    new_status: models.PaymentStatus,
-    changed_by: UUID
-):
-    """결제 상태 변경 로그를 생성합니다."""
-    payment_log = models.WholesaleContractPaymentLog(
-        contract_id=contract_id,
-        old_status=old_status,
-        new_status=new_status,
-        changed_by=changed_by
-    )
-    db.add(payment_log)
+    item_id: UUID
+) -> bool:
+    """
+    계약의 특정 아이템을 삭제합니다.
+    """
+    db_item = db.query(models.WholesaleContractItem).filter(
+        models.WholesaleContractItem.contract_id == contract_id,
+        models.WholesaleContractItem.id == item_id
+    ).first()
+    
+    if not db_item:
+        return False
+
+    # 계약의 총 금액 업데이트
+    db_contract = get_wholesale_contract(db, contract_id)
+    db_contract.total_price -= db_item.total_price
+
+    db.delete(db_item)
     db.commit()
-    db.refresh(payment_log)
-    return payment_log
-
-def get_contract_payment_logs(
-    db: Session,
-    contract_id: UUID,
-    company_id: UUID,
-    skip: int = 0,
-    limit: int = 100
-):
-    """계약의 결제 상태 변경 로그를 조회합니다."""
-    contract = get_contract(db, contract_id)
-    if not contract:
-        return None
-
-    return db.query(models.WholesaleContractPaymentLog)\
-        .filter(models.WholesaleContractPaymentLog.contract_id == contract_id)\
-        .order_by(desc(models.WholesaleContractPaymentLog.changed_at))\
-        .offset(skip)\
-        .limit(limit)\
-        .all()
-
-def get_payment_log(
-    db: Session,
-    log_id: UUID,
-    company_id: UUID
-):
-    """특정 결제 상태 변경 로그를 조회합니다."""
-    return db.query(models.WholesaleContractPaymentLog)\
-        .filter(
-            and_(
-                models.WholesaleContractPaymentLog.id == log_id,
-                models.WholesaleContractPaymentLog.contract_id == log_id,
-                models.WholesaleContractPaymentLog.company_id == company_id
-            )
-        ).first() 
+    return True 

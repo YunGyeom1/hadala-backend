@@ -1,276 +1,267 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
-from typing import List, Optional
+from datetime import datetime
+from typing import List, Optional, Tuple
 from uuid import UUID
-from datetime import date
-from . import models, schemas
-from app.transactions.wholesale_contract import models as contract_models
 
-def create_shipment(db: Session, shipment: schemas.WholesaleShipmentCreate, company_id: UUID) -> models.WholesaleShipment:
-    """새 출고 기록 생성"""
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
+
+from app.transactions.wholesale_shipment import models, schemas
+from app.transactions.wholesale_contract.models import ContractStatus, PaymentStatus
+
+def create_wholesale_shipment(
+    db: Session,
+    shipment_create: schemas.WholesaleShipmentCreate,
+    creator_id: UUID
+) -> schemas.WholesaleShipmentResponse:
+    """
+    새로운 도매 출하를 생성합니다.
+    """
+    # 출하 생성
     db_shipment = models.WholesaleShipment(
-        contract_id=shipment.contract_id,
-        farmer_id=shipment.farmer_id,
-        company_id=company_id,
-        center_id=shipment.center_id,
-        wholesaler_id=shipment.wholesaler_id,
-        shipment_date=shipment.shipment_date,
-        total_price=shipment.total_price
+        title=shipment_create.title,
+        contract_id=shipment_create.contract_id,
+        creator_id=creator_id,
+        supplier_person_id=shipment_create.supplier_person_id,
+        supplier_company_id=shipment_create.supplier_company_id,
+        receiver_person_id=shipment_create.receiver_person_id,
+        receiver_company_id=shipment_create.receiver_company_id,
+        shipment_datetime=shipment_create.shipment_datetime,
+        departure_center_id=shipment_create.departure_center_id,
+        arrival_center_id=shipment_create.arrival_center_id,
+        payment_due_date=shipment_create.payment_due_date,
+        notes=shipment_create.notes,
+        total_price=0.0  # 초기값 설정
     )
+    
     db.add(db_shipment)
-    db.flush()  # ID 생성을 위해 flush
-
-    # 품목 추가
-    for item in shipment.items:
+    db.flush()  # ID 생성
+    
+    # 출하 항목 생성
+    total_price = 0.0
+    for item in shipment_create.items:
         db_item = models.WholesaleShipmentItem(
             shipment_id=db_shipment.id,
-            crop_name=item.crop_name,
+            contract_item_id=item.contract_item_id,
+            product_name=item.product_name,
             quantity=item.quantity,
             unit_price=item.unit_price,
-            total_price=item.total_price,
-            quality_grade=item.quality_grade
+            total_price=item.quantity * item.unit_price,
+            notes=item.notes
         )
+        total_price += db_item.total_price
         db.add(db_item)
-
+    
+    # 총액 업데이트
+    db_shipment.total_price = total_price
+    
     db.commit()
     db.refresh(db_shipment)
-    return db_shipment
+    
+    return schemas.WholesaleShipmentResponse.model_validate(db_shipment)
 
-def get_shipments(
+def get_wholesale_shipment(
     db: Session,
-    company_id: UUID,
-    skip: int = 0,
-    limit: int = 100,
-    center_id: Optional[UUID] = None,
-    farmer_id: Optional[UUID] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None
-) -> List[models.WholesaleShipment]:
-    """출고 목록 조회"""
-    query = db.query(models.WholesaleShipment).filter(
-        models.WholesaleShipment.company_id == company_id
-    )
-
-    if center_id:
-        query = query.filter(models.WholesaleShipment.center_id == center_id)
-    if farmer_id:
-        query = query.filter(models.WholesaleShipment.farmer_id == farmer_id)
-    if start_date:
-        query = query.filter(models.WholesaleShipment.shipment_date >= start_date)
-    if end_date:
-        query = query.filter(models.WholesaleShipment.shipment_date <= end_date)
-
-    return query.offset(skip).limit(limit).all()
-
-def get_shipment(db: Session, shipment_id: UUID, company_id: UUID) -> Optional[models.WholesaleShipment]:
-    """특정 출고 조회"""
-    return db.query(models.WholesaleShipment).filter(
-        and_(
-            models.WholesaleShipment.id == shipment_id,
-            models.WholesaleShipment.company_id == company_id
-        )
+    shipment_id: UUID
+) -> Optional[schemas.WholesaleShipmentResponse]:
+    """
+    ID로 출하를 조회합니다.
+    """
+    db_shipment = db.query(models.WholesaleShipment).filter(
+        models.WholesaleShipment.id == shipment_id
     ).first()
+    
+    if not db_shipment:
+        return None
+        
+    return schemas.WholesaleShipmentResponse.model_validate(db_shipment)
 
-def update_shipment(
+def search_wholesale_shipments(
+    db: Session,
+    search_params: schemas.WholesaleShipmentSearch
+) -> Tuple[List[schemas.WholesaleShipmentResponse], int]:
+    """
+    검색 조건에 맞는 출하 목록을 조회합니다.
+    """
+    query = db.query(models.WholesaleShipment)
+    
+    # 검색 조건 적용
+    if search_params.title:
+        query = query.filter(models.WholesaleShipment.title.ilike(f"%{search_params.title}%"))
+    
+    if search_params.start_date:
+        query = query.filter(models.WholesaleShipment.shipment_datetime >= search_params.start_date)
+    
+    if search_params.end_date:
+        query = query.filter(models.WholesaleShipment.shipment_datetime <= search_params.end_date)
+    
+    if search_params.supplier_company_id:
+        query = query.filter(models.WholesaleShipment.supplier_company_id == search_params.supplier_company_id)
+    
+    if search_params.receiver_company_id:
+        query = query.filter(models.WholesaleShipment.receiver_company_id == search_params.receiver_company_id)
+    
+    if search_params.shipment_status:
+        query = query.filter(models.WholesaleShipment.shipment_status == search_params.shipment_status)
+    
+    if search_params.payment_status:
+        query = query.filter(models.WholesaleShipment.payment_status == search_params.payment_status)
+    
+    # 전체 개수 조회
+    total = query.count()
+    
+    # 페이지네이션 적용
+    query = query.order_by(models.WholesaleShipment.created_at.desc())
+    query = query.offset((search_params.page - 1) * search_params.page_size)
+    query = query.limit(search_params.page_size)
+    
+    # 결과 조회
+    shipments = query.all()
+    
+    return [schemas.WholesaleShipmentResponse.model_validate(shipment) for shipment in shipments], total
+
+def get_wholesale_shipment_items(
+    db: Session,
+    shipment_id: UUID
+) -> List[schemas.WholesaleShipmentItemResponse]:
+    """
+    출하의 항목 목록을 조회합니다.
+    """
+    items = db.query(models.WholesaleShipmentItem).filter(
+        models.WholesaleShipmentItem.shipment_id == shipment_id
+    ).all()
+    
+    return [schemas.WholesaleShipmentItemResponse.model_validate(item) for item in items]
+
+def update_wholesale_shipment(
     db: Session,
     shipment_id: UUID,
-    shipment: schemas.WholesaleShipmentUpdate,
-    company_id: UUID
-) -> Optional[models.WholesaleShipment]:
-    """출고 정보 수정"""
-    db_shipment = get_shipment(db, shipment_id, company_id)
-    if not db_shipment or db_shipment.is_finalized:
+    shipment_update: schemas.WholesaleShipmentUpdate
+) -> Optional[schemas.WholesaleShipmentResponse]:
+    """
+    출하 정보를 업데이트합니다.
+    """
+    db_shipment = get_wholesale_shipment(db, shipment_id)
+    
+    if not db_shipment:
         return None
+    
+    # 기본 정보 업데이트
+    update_data = shipment_update.model_dump(exclude_unset=True, exclude={'items'})
+    for key, value in update_data.items():
+        setattr(db_shipment, key, value)
 
-    update_data = shipment.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_shipment, field, value)
-
+    if "items" in update_data:
+        items = update_data.pop("items")
+        
+        # 기존 항목 삭제
+        db.query(models.WholesaleShipmentItem).filter(
+            models.WholesaleShipmentItem.shipment_id == shipment_id
+        ).delete()
+        
+        # 새로운 항목 추가
+        total_price = 0.0
+        for item in items:
+            db_item = models.WholesaleShipmentItem(
+                shipment_id=shipment_id,
+                contract_item_id=item.contract_item_id,
+                product_name=item.product_name,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.quantity * item.unit_price,
+                notes=item.notes
+            )
+            total_price += db_item.total_price
+            db.add(db_item)
+        
+        db_shipment.total_price = total_price
+    
     db.commit()
     db.refresh(db_shipment)
-    return db_shipment
+    
+    return schemas.WholesaleShipmentResponse.model_validate(db_shipment)
 
-def delete_shipment(db: Session, shipment_id: UUID, company_id: UUID) -> bool:
-    """출고 삭제"""
-    db_shipment = get_shipment(db, shipment_id, company_id)
-    if not db_shipment or db_shipment.is_finalized:
+def update_wholesale_shipment_status(
+    db: Session,
+    shipment_id: UUID,
+    status: ContractStatus
+) -> Optional[schemas.WholesaleShipmentResponse]:
+    """
+    출하 상태를 변경합니다.
+    """
+    db_shipment = get_wholesale_shipment(db, shipment_id)
+    
+    if not db_shipment:
+        return None
+    
+    db_shipment.shipment_status = status
+    db.commit()
+    db.refresh(db_shipment)
+    
+    return schemas.WholesaleShipmentResponse.model_validate(db_shipment)
+
+def update_wholesale_shipment_payment_status(
+    db: Session,
+    shipment_id: UUID,
+    status: PaymentStatus
+) -> Optional[schemas.WholesaleShipmentResponse]:
+    """
+    결제 상태를 변경합니다.
+    """
+    db_shipment = get_wholesale_shipment(db, shipment_id)
+    
+    if not db_shipment:
+        return None
+    
+    db_shipment.payment_status = status
+    db.commit()
+    db.refresh(db_shipment)
+    
+    return schemas.WholesaleShipmentResponse.model_validate(db_shipment)
+
+def delete_wholesale_shipment(
+    db: Session,
+    shipment_id: UUID
+) -> bool:
+    """
+    출하를 삭제합니다.
+    """
+    db_shipment = get_wholesale_shipment(db, shipment_id)
+    
+    if not db_shipment:
         return False
-
+    
     db.delete(db_shipment)
     db.commit()
+    
     return True
 
-def get_shipment_items(
+def delete_wholesale_shipment_item(
     db: Session,
     shipment_id: UUID,
-    company_id: UUID
-) -> List[models.WholesaleShipmentItem]:
-    """출고 품목 목록 조회"""
-    shipment = get_shipment(db, shipment_id, company_id)
-    if not shipment:
-        return []
-    return shipment.items
-
-def update_shipment_item(
-    db: Session,
-    item_id: UUID,
-    item: schemas.WholesaleShipmentItemUpdate,
-    company_id: UUID
-) -> Optional[models.WholesaleShipmentItem]:
-    """출고 품목 수정"""
-    db_item = db.query(models.WholesaleShipmentItem).join(
-        models.WholesaleShipment
-    ).filter(
+    item_id: UUID
+) -> bool:
+    """
+    출하 항목을 삭제합니다.
+    """
+    db_item = db.query(models.WholesaleShipmentItem).filter(
         and_(
-            models.WholesaleShipmentItem.id == item_id,
-            models.WholesaleShipment.company_id == company_id,
-            ~models.WholesaleShipment.is_finalized
+            models.WholesaleShipmentItem.shipment_id == shipment_id,
+            models.WholesaleShipmentItem.id == item_id
         )
     ).first()
-
-    if not db_item:
-        return None
-
-    update_data = item.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_item, field, value)
-
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-def delete_shipment_item(db: Session, item_id: UUID, company_id: UUID) -> bool:
-    """출고 품목 삭제"""
-    db_item = db.query(models.WholesaleShipmentItem).join(
-        models.WholesaleShipment
-    ).filter(
-        and_(
-            models.WholesaleShipmentItem.id == item_id,
-            models.WholesaleShipment.company_id == company_id,
-            ~models.WholesaleShipment.is_finalized
-        )
-    ).first()
-
+    
     if not db_item:
         return False
-
+    
+    # 총액 업데이트
+    db_shipment = db.query(models.WholesaleShipment).filter(
+        models.WholesaleShipment.id == shipment_id
+    ).first()
+    
+    if db_shipment:
+        db_shipment.total_price -= db_item.total_price
+    
     db.delete(db_item)
     db.commit()
-    return True
-
-def get_contract_shipments(
-    db: Session,
-    contract_id: UUID
-) -> List[models.WholesaleShipment]:
-    """계약에 연결된 출고 목록 조회"""
-    return db.query(models.WholesaleShipment).filter(
-        and_(
-            models.WholesaleShipment.contract_id == contract_id
-        )
-    ).all()
-
-def create_shipment_from_contract(
-    db: Session,
-    contract_id: UUID,
-    shipment: schemas.WholesaleShipmentCreate,
-    company_id: UUID
-) -> Optional[models.WholesaleShipment]:
-    """계약 기준으로 출고 생성"""
-    contract = db.query(contract_models.WholesaleContract).filter(
-        and_(
-            contract_models.WholesaleContract.id == contract_id,
-            contract_models.WholesaleContract.company_id == company_id
-        )
-    ).first()
-
-    if not contract:
-        return None
-
-    return create_shipment(db, shipment, company_id)
-
-def get_contract_shipment_progress(
-    db: Session,
-    contract_id: UUID
-) -> Optional[schemas.ContractShipmentProgress]:
-    """계약 품목별 출고 이행 현황 조회"""
-    contract = db.query(contract_models.WholesaleContract).filter(
-        and_(
-            contract_models.WholesaleContract.id == contract_id
-        )
-    ).first()
-
-    if not contract:
-        return None
-
-    # 계약 품목별 출고 수량 집계
-    shipment_items = (
-    db.query(
-        contract_models.WholesaleContractItem.crop_name,
-        contract_models.WholesaleContractItem.quantity_kg.label('total_quantity'),
-        contract_models.WholesaleContractItem.unit_price,
-        contract_models.WholesaleContractItem.total_price,
-        func.coalesce(func.sum(models.WholesaleShipmentItem.quantity), 0).label('shipped_quantity')
-    )
-    .select_from(contract_models.WholesaleContractItem)
-    .outerjoin(
-        models.WholesaleShipment,
-        and_(
-            models.WholesaleShipment.contract_id == contract_id,
-            ~models.WholesaleShipment.is_finalized
-        )
-    )
-    .outerjoin(
-        models.WholesaleShipmentItem,
-        models.WholesaleShipmentItem.shipment_id == models.WholesaleShipment.id
-    )
-    .filter(
-        contract_models.WholesaleContractItem.contract_id == contract_id
-    )
-    .group_by(
-        contract_models.WholesaleContractItem.crop_name,
-        contract_models.WholesaleContractItem.quantity_kg,
-        contract_models.WholesaleContractItem.unit_price,
-        contract_models.WholesaleContractItem.total_price
-    )
-    .all()
-    )
-
-    items = []
-    total_shipped_amount = 0
-    total_remaining_amount = 0
-
-    for item in shipment_items:
-        remaining_quantity = item.total_quantity - item.shipped_quantity
-        items.append(schemas.ShipmentProgressItem(
-            crop_name=item.crop_name,
-            total_quantity=item.total_quantity,
-            shipped_quantity=item.shipped_quantity,
-            remaining_quantity=remaining_quantity,
-            unit_price=item.unit_price,
-            total_price=item.total_price
-        ))
-        total_shipped_amount += item.shipped_quantity * item.unit_price
-        total_remaining_amount += remaining_quantity * item.unit_price
-
-    return schemas.ContractShipmentProgress(
-        contract_id=contract_id,
-        items=items,
-        total_shipped_amount=total_shipped_amount,
-        total_remaining_amount=total_remaining_amount
-    )
-
-
-def finalize_shipment(
-    db: Session,
-    shipment_id: UUID,
-    company_id: UUID
-) -> Optional[models.WholesaleShipment]:
-    """출고 완료 처리"""
-    db_shipment = get_shipment(db, shipment_id, company_id)
-    if not db_shipment or db_shipment.is_finalized:
-        return None
-
-    db_shipment.is_finalized = True
-    db.commit()
-    db.refresh(db_shipment)
-    return db_shipment 
+    
+    return True 

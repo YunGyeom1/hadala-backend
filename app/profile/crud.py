@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
-from app.profile.models import Profile, ProfileType
+from app.profile.models import Profile, ProfileType, ProfileRole
 from app.profile.schemas import ProfileCreate, ProfileUpdate
 
 def get_profile(db: Session, profile_id: UUID) -> Optional[Profile]:

@@ -11,7 +11,7 @@ from app.database.base import Base
 class CompanyType(enum.Enum):
     wholesaler = "wholesaler"
     retailer = "retailer"
-    farm = "farm"
+    farmer = "farmer"
 
 class Company(Base):
     __tablename__ = "companies"
