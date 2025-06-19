@@ -9,6 +9,7 @@ from app.company.center.api import router as center_router
 from app.transactions.shipment.api import router as shipment_router
 from app.transactions.contract.api import router as contract_router
 from app.transactions.summary.api import router as summary_router
+from app.profile.api import router as profile_router
 
 
 app = FastAPI()
@@ -23,6 +24,7 @@ app.include_router(center_router)
 app.include_router(shipment_router)
 app.include_router(contract_router)
 app.include_router(summary_router)
+app.include_router(profile_router)
 
 @app.get("/")
 def root():

@@ -6,7 +6,7 @@ from app.database.session import get_db
 from app.profile import crud, schemas
 from app.core.auth.models import User
 from app.profile.dependencies import get_current_profile
-from app.profile.models import Profile
+from app.profile.models import Profile, ProfileRole
 from app.core.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -42,7 +42,7 @@ def create_public_profile(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 username입니다"
         )
-    return crud.create_dummy_profile(db, profile)
+    return crud.create_external_profile(db, profile)
 
 @router.get("/me", response_model=List[schemas.MyProfileResponse])
 def get_my_profiles(
@@ -120,7 +120,7 @@ def update_profile_role(
 
     # user_id가 연결되지 않은 External Profile이거나, 현재 로그인한 사용자가 같은 회사의 owner인지 확인
     if profile.user_id:
-        if profile.company_id != current_profile.company_id or current_profile.role != "owner":
+        if profile.company_id != current_profile.company_id or current_profile.role != ProfileRole.owner:
             raise HTTPException(status_code=403, detail="권한이 없습니다")
 
     return crud.update_profile_role(db, profile.id, new_role.role) 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from typing import Optional, List
 from .models import CompanyType
 from app.profile.models import ProfileRole
@@ -25,8 +25,7 @@ class CompanyResponse(CompanyBase):
     retail_company_detail: Optional[RetailCompanyDetailResponse] = None
     farm_company_detail: Optional[FarmerCompanyDetailResponse] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CompanyOwnerUpdate(BaseModel):
     new_owner_id: UUID4

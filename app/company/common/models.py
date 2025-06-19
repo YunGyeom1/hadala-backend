@@ -19,11 +19,11 @@ class Company(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False, unique=True, index=True)
     type = Column(Enum(CompanyType), nullable=False)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=True)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", use_alter=True), nullable=True)
     
-    wholesale_company_detail_id = Column(UUID(as_uuid=True), ForeignKey("wholesale_company_details.company_id"), nullable=True)
-    retail_company_detail_id = Column(UUID(as_uuid=True), ForeignKey("retail_company_details.company_id"), nullable=True)
-    farm_company_detail_id = Column(UUID(as_uuid=True), ForeignKey("farmer_company_details.company_id"), nullable=True)
+    wholesale_company_detail_id = Column(UUID(as_uuid=True), ForeignKey("wholesale_company_details.company_id", use_alter=True), nullable=True)
+    retail_company_detail_id = Column(UUID(as_uuid=True), ForeignKey("retail_company_details.company_id", use_alter=True), nullable=True)
+    farm_company_detail_id = Column(UUID(as_uuid=True), ForeignKey("farmer_company_details.company_id", use_alter=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

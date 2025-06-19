@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 
 from app.transactions.common.models import ProductQuality, ContractStatus, PaymentStatus
 
@@ -22,8 +22,7 @@ class ContractItemResponse(ContractItemBase):
 
     updated_at: datetime
     created_at: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ContractBase(BaseModel):
     title: str
@@ -60,5 +59,4 @@ class ContractResponse(ContractBase):
     total_price: float
     items: List[ContractItemResponse]
 
-    class Config:
-        from_attributes = True 
+    model_config = ConfigDict(from_attributes=True) 

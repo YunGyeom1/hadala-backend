@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 
 from app.transactions.common.models import ProductQuality, ShipmentStatus
 
@@ -22,8 +22,7 @@ class ShipmentItemResponse(ShipmentItemBase):
 
     updated_at: datetime
     created_at: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ShipmentBase(BaseModel):
     title: str
@@ -53,8 +52,7 @@ class ShipmentResponse(ShipmentBase):
     creator_id: UUID4
     items: List[ShipmentItemResponse]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ShipmentListResponse(BaseModel):
     shipments: List[ShipmentResponse]
@@ -62,5 +60,4 @@ class ShipmentListResponse(BaseModel):
     page: int
     size: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

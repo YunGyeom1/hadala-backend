@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 class WholesaleCompanyDetail(Base):
     __tablename__ = "wholesale_company_details"
 
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), primary_key=True)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", use_alter=True), primary_key=True)
 
     # 공통 필드
     address = Column(String, nullable=True)

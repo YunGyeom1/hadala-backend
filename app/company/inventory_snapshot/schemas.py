@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import date
 from typing import List
 from app.transactions.common.models import ProductQuality
@@ -17,6 +17,7 @@ class CenterInventorySnapshot(BaseModel):
     total_quantity: int
     total_price: float
     items: List[InventorySnapshotItem]
+    model_config = ConfigDict(from_attributes=True)
 
 class DailyInventorySnapshot(BaseModel):
     snapshot_date: date
