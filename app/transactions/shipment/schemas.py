@@ -55,3 +55,12 @@ class ShipmentResponse(ShipmentBase):
 
     class Config:
         from_attributes = True
+
+class ShipmentListResponse(BaseModel):
+    shipments: List[ShipmentResponse]
+    total: int
+    page: int
+    size: int
+
+    class Config:
+        from_attributes = True

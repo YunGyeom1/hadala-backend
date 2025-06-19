@@ -15,13 +15,13 @@ class Shipment(Base):
     title = Column(String, nullable=False)
     notes = Column(String)
     
-    contract_id = Column(UUID(as_uuid=True, index=True), ForeignKey("contracts.id"), nullable=False)
+    contract_id = Column(UUID(as_uuid=True), ForeignKey("contracts.id"), nullable=False, index=True)
     
-    creator_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"), nullable=False)
-    supplier_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
-    supplier_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
-    receiver_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
-    receiver_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
+    creator_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False, index=True)
+    supplier_person_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), index=True)
+    supplier_company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), index=True)
+    receiver_person_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), index=True)
+    receiver_company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), index=True)
     departure_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
     arrival_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
     
@@ -32,7 +32,7 @@ class Shipment(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    contract = relationship("Contract", back_populates="shipments")
+    contract = relationship("Contract")
     creator = relationship("Profile", foreign_keys=[creator_id])
     supplier_person = relationship("Profile", foreign_keys=[supplier_person_id])
     supplier_company = relationship("Company", foreign_keys=[supplier_company_id])
@@ -46,7 +46,7 @@ class ShipmentItem(Base):
     __tablename__ = "shipment_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    shipment_id = Column(UUID(as_uuid=True, index=True), ForeignKey("shipments.id"), nullable=False)
+    shipment_id = Column(UUID(as_uuid=True), ForeignKey("shipments.id"), nullable=False, index=True)
     
     product_name = Column(String, nullable=False)
     quality = Column(Enum(ProductQuality), nullable=False)

@@ -17,4 +17,4 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    profile = relationship("Profile", back_populates="user")
+    profiles = relationship("Profile", back_populates="user")

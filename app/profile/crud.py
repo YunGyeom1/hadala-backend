@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.profile.models import Profile, ProfileType, ProfileRole
-from app.profile.schemas import MyProfileCreate, MyProfileUpdate, DummyProfileCreate, DummyProfileUpdate
+from app.profile.schemas import MyProfileCreate, MyProfileUpdate, ExternalProfileCreate, ExternalProfileUpdate
 
 def create_my_profile(db: Session, profile: MyProfileCreate, user_id: UUID) -> Profile:
     """
@@ -17,7 +17,7 @@ def create_my_profile(db: Session, profile: MyProfileCreate, user_id: UUID) -> P
     db.refresh(db_profile)
     return db_profile
 
-def create_dummy_profile(db: Session, profile: DummyProfileCreate) -> Profile:
+def create_external_profile(db: Session, profile: ExternalProfileCreate) -> Profile:
     """
     user_id가 없는 공개 프로필을 생성합니다.
     """
@@ -74,7 +74,7 @@ def update_my_profile(db: Session, profile_id: UUID, profile_update: MyProfileUp
     db.refresh(db_profile)
     return db_profile
 
-def update_dummy_profile(db: Session, profile_id: UUID, profile_update: DummyProfileUpdate) -> Profile:
+def update_external_profile(db: Session, profile_id: UUID, profile_update: ExternalProfileUpdate) -> Profile:
     """
     공개 프로필을 수정합니다.
     """

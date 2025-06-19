@@ -26,4 +26,3 @@ class Center(Base):
 
     manager_profile = relationship("Profile")
     company = relationship("Company")
-    inventories = relationship("CenterInventory", back_populates="center")

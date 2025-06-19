@@ -4,9 +4,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 
-from app.company.common.crud import get_company_by_name
 from app.profile.crud import get_profile_by_username
-from app.company.center.crud import get_center_by_name
 from app.transactions.contract.models import Contract, ContractItem
 from app.transactions.contract.schemas import (
     ContractCreate, ContractUpdate, ContractResponse,
@@ -68,41 +66,18 @@ def create_contract(db: Session, contract: ContractCreate, creator_username: str
     if not creator_id:
         return None
     
-    lookup_map = {
-        "supplier_person_username": ("supplier_person_id", get_profile_by_username),
-        "supplier_company_name": ("supplier_company_id", get_company_by_name),
-        "receiver_person_username": ("receiver_person_id", get_profile_by_username),
-        "receiver_company_name": ("receiver_company_id", get_company_by_name),
-        "departure_center_name": ("departure_center_id", get_center_by_name),
-        "arrival_center_name": ("arrival_center_id", get_center_by_name),
-    }
-
-    resolved_ids = {}
-
-    for field_name, (id_name, resolver) in lookup_map.items():
-        value = getattr(contract, field_name)
-        resolved_ids[id_name] = resolver(db, value).id if value else None
-
-    supplier_person_id = resolved_ids["supplier_person_id"]
-    supplier_company_id = resolved_ids["supplier_company_id"]
-    receiver_person_id = resolved_ids["receiver_person_id"]
-    receiver_company_id = resolved_ids["receiver_company_id"]
-    departure_center_id = resolved_ids["departure_center_id"]
-    arrival_center_id = resolved_ids["arrival_center_id"]
-    
-    
     # 계약 데이터 생성
     db_contract = Contract(
         title=contract.title,
         creator_id=creator_id,
-        supplier_person_id=supplier_person_id,
-        supplier_company_id=supplier_company_id,
-        receiver_person_id=receiver_person_id,
-        receiver_company_id=receiver_company_id,
+        supplier_contractor_id=contract.supplier_contractor_id,
+        supplier_company_id=contract.supplier_company_id,
+        receiver_contractor_id=contract.receiver_contractor_id,
+        receiver_company_id=contract.receiver_company_id,
         contract_datetime=contract.contract_datetime,
         delivery_datetime=contract.delivery_datetime,
-        departure_center_id=departure_center_id,
-        arrival_center_id=arrival_center_id,
+        departure_center_id=contract.departure_center_id,
+        arrival_center_id=contract.arrival_center_id,
         payment_due_date=contract.payment_due_date,
         contract_status=contract.contract_status,
         payment_status=contract.payment_status,
@@ -146,23 +121,8 @@ def update_contract(
     # 기본 필드 업데이트
     update_data = contract_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        if field not in ["items", "supplier_person_username", "supplier_company_name", 
-                        "receiver_person_username", "receiver_company_name"]:
+        if field not in ["items"]:
             setattr(db_contract, field, value)
-    
-    pairs = [
-        ("supplier_person_username", "supplier_person_id", get_profile_by_username),
-        ("supplier_company_name", "supplier_company_id", get_company_by_name),
-        ("receiver_person_username", "receiver_person_id", get_profile_by_username),
-        ("receiver_company_name", "receiver_company_id", get_company_by_name),
-        ("departure_center_name", "departure_center_id", get_center_by_name),
-        ("arrival_center_name", "arrival_center_id", get_center_by_name),
-    ]
-
-    for input_field, target_field, resolver in pairs:
-        val = getattr(contract_update, input_field)
-        if val:
-            setattr(db_contract, target_field, resolver(db, val).id)
         
     # 아이템 업데이트
     if contract_update.items is not None:
@@ -214,12 +174,12 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
     return ContractResponse(
         id=contract.id,
         title=contract.title,
-        supplier_person_username=contract.supplier_person.username if contract.supplier_person else None,
-        supplier_company_name=contract.supplier_company.name if contract.supplier_company else None,
-        receiver_person_username=contract.receiver_person.username if contract.receiver_person else None,
-        receiver_company_name=contract.receiver_company.name if contract.receiver_company else None,
-        departure_center_name=contract.departure_center.name if contract.departure_center else None,
-        arrival_center_name=contract.arrival_center.name if contract.arrival_center else None,
+        supplier_contractor_id=contract.supplier_contractor_id,
+        supplier_company_id=contract.supplier_company_id,
+        receiver_contractor_id=contract.receiver_contractor_id,
+        receiver_company_id=contract.receiver_company_id,
+        departure_center_id=contract.departure_center_id,
+        arrival_center_id=contract.arrival_center_id,
         contract_datetime=contract.contract_datetime,
         delivery_datetime=contract.delivery_datetime,
         payment_due_date=contract.payment_due_date,
@@ -227,7 +187,8 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
         payment_status=contract.payment_status,
         notes=contract.notes,
         total_price=contract.total_price,
-        creator_username=contract.creator.username,
+        creator_id=contract.creator_id,
+        next_contract_id=contract.next_contract_id,
         items=[
             ContractItemResponse(
                 id=item.id,
@@ -235,7 +196,9 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
                 quality=item.quality,
                 quantity=item.quantity,
                 unit_price=item.unit_price,
-                total_price=item.total_price
+                total_price=item.total_price,
+                created_at=item.created_at,
+                updated_at=item.updated_at
             ) for item in contract.items
         ]
     ) 

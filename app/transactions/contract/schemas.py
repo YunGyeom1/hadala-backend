@@ -41,7 +41,7 @@ class ContractBase(BaseModel):
     payment_due_date: Optional[datetime] = None
     
     contract_status: Optional[ContractStatus] = ContractStatus.DRAFT
-    payment_status: Optional[PaymentStatus] = PaymentStatus.PENDING
+    payment_status: Optional[PaymentStatus] = PaymentStatus.UNPAID
     
     #없는거: id, total_price, creator_id, next_contract_id, items
 

@@ -32,4 +32,8 @@ class FarmerCompanyDetail(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    company = relationship("Company", back_populates="farmer_detail") 
+    company = relationship(
+        "Company",
+        foreign_keys=[company_id]
+    ) 
+    

@@ -2,9 +2,9 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from . import models, schemas
 from app.profile.crud import get_profile
-from app.transactions.shipment import crud as retail_crud
-from app.transactions.shipment import crud as wholesale_crud
-from datetime import date, Optional
+from datetime import date
+from typing import Optional
+from app.transactions.shipment.models import Shipment
 
 def get_center_by_id(db: Session, center_id: UUID):
     """
@@ -79,23 +79,12 @@ def get_first_shipment_date_from_center(db: Session, center_id: UUID) -> Optiona
     """
     센터의 가장 첫 영수증 날짜를 조회합니다.
     """
-    # retail shipment의 가장 첫 날짜 조회
-    first_retail = db.query(retail_crud.models.shipment)\
-        .filter(retail_crud.models.shipment.center_id == center_id)\
-        .order_by(retail_crud.models.shipment.created_at.asc())\
+    # shipment의 가장 첫 날짜 조회
+    first_shipment = db.query(Shipment)\
+        .filter(Shipment.departure_center_id == center_id)\
+        .order_by(Shipment.created_at.asc())\
         .first()
     
-    # wholesale shipment의 가장 첫 날짜 조회
-    first_wholesale = db.query(wholesale_crud.models.shipment)\
-        .filter(wholesale_crud.models.shipment.center_id == center_id)\
-        .order_by(wholesale_crud.models.shipment.created_at.asc())\
-        .first()
-    
-    # 두 날짜 중 더 이른 날짜 반환
-    if first_retail and first_wholesale:
-        return min(first_retail.created_at.date(), first_wholesale.created_at.date())
-    elif first_retail:
-        return first_retail.created_at.date()
-    elif first_wholesale:
-        return first_wholesale.created_at.date()
+    if first_shipment:
+        return first_shipment.created_at.date()
     return None

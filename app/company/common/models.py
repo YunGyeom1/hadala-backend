@@ -29,10 +29,25 @@ class Company(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # 관계 설정
-    owner = relationship("Profile", back_populates="owned_companies")
-    wholesaler_detail = relationship("WholesaleCompanyDetail", back_populates="company", uselist=False)
-    retail_detail = relationship("RetailCompanyDetail", back_populates="company", uselist=False)
-    farmer_detail = relationship("FarmerCompanyDetail", back_populates="company", uselist=False)
+    owner = relationship("Profile", foreign_keys=[owner_id], back_populates="owned_companies")
+    wholesaler_detail = relationship(
+        "WholesaleCompanyDetail",
+        back_populates="company",
+        uselist=False,
+        foreign_keys=[wholesale_company_detail_id]
+    )
+    retail_detail = relationship(
+        "RetailCompanyDetail",
+        back_populates="company",
+        uselist=False,
+        foreign_keys=[retail_company_detail_id]
+    )
+    farmer_detail = relationship(
+        "FarmerCompanyDetail",
+        back_populates="company",
+        uselist=False,
+        foreign_keys=[farm_company_detail_id]
+    )
     
 # class CompanyDetail(Base):
 #     __tablename__ = "company_details"

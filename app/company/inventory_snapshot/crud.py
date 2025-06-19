@@ -1,15 +1,14 @@
 from datetime import date
-from typing import List, Dict, Tuple, Optional
+from typing import List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date, and_
 from app.company.inventory_snapshot.schemas import (
     DailyInventorySnapshot, CenterInventorySnapshot, InventorySnapshotItem,
-    UpdateDailyInventorySnapshotRequest, UpdateInventorySnapshotItemRequest
+    UpdateDailyInventorySnapshotRequest
 )
 from app.company.inventory_snapshot.models import CenterInventorySnapshot as CenterInventorySnapshotModel
-from app.company.inventory_snapshot.models import CenterInvenrSnapshotItem as CenterInventorySnapshotItemModel
-from app.transactions.shipment.models import shipment, shipmentItem
-from app.transactions.shipment.models import shipment, shipmentItem
+from app.company.inventory_snapshot.models import CenterInventorySnapshotItem as CenterInventorySnapshotItemModel
+from app.transactions.shipment.models import Shipment, ShipmentItem
 from uuid import UUID
 
 def get_daily_company_inventory_snapshot(
@@ -65,7 +64,7 @@ def get_daily_company_inventory_snapshots_by_date_range(
     current_date = start_date
     
     while current_date <= end_date:
-        snapshot = get_daily_inventory_snapshot(db, current_date, company_id)
+        snapshot = get_daily_company_inventory_snapshot(db, current_date, company_id)
         snapshots.append(snapshot)
         current_date = current_date.replace(day=current_date.day + 1)
     
@@ -113,42 +112,42 @@ def create_daily_center_inventory_snapshot(
     # 출하 데이터 조회
     # 도매 출하 데이터 조회
     wholesale_items = db.query(
-        shipmentItem.product_name,
-        shipmentItem.quality,
-        func.sum(shipmentItem.quantity).label('total_quantity'),
-        func.avg(shipmentItem.unit_price).label('avg_unit_price')
+        ShipmentItem.product_name,
+        ShipmentItem.quality,
+        func.sum(ShipmentItem.quantity).label('total_quantity'),
+        func.avg(ShipmentItem.unit_price).label('avg_unit_price')
     ).join(
-        shipment,
-        shipmentItem.shipment_id == shipment.id
+        Shipment,
+        ShipmentItem.shipment_id == Shipment.id
     ).filter(
         and_(
-            shipment.shipment_date == target_date,
-            shipment.supplier_company_id == company_id,
-            shipment.departure_center_id == center_id
+            cast(Shipment.shipment_datetime, Date) == target_date,
+            Shipment.supplier_company_id == company_id,
+            Shipment.departure_center_id == center_id
         )
     ).group_by(
-        shipmentItem.product_name,
-        shipmentItem.quality
+        ShipmentItem.product_name,
+        ShipmentItem.quality
     ).all()
     
     # 소매 출하 데이터 조회
     retail_items = db.query(
-        shipmentItem.product_name,
-        shipmentItem.quality,
-        func.sum(shipmentItem.quantity).label('total_quantity'),
-        func.avg(shipmentItem.unit_price).label('avg_unit_price')
+        ShipmentItem.product_name,
+        ShipmentItem.quality,
+        func.sum(ShipmentItem.quantity).label('total_quantity'),
+        func.avg(ShipmentItem.unit_price).label('avg_unit_price')
     ).join(
-        shipment,
-        shipmentItem.shipment_id == shipment.id
+        Shipment,
+        ShipmentItem.shipment_id == Shipment.id
     ).filter(
         and_(
-            shipment.shipment_date == target_date,
-            shipment.supplier_company_id == company_id,
-            shipment.departure_center_id == center_id
+            cast(Shipment.shipment_datetime, Date) == target_date,
+            Shipment.supplier_company_id == company_id,
+            Shipment.departure_center_id == center_id
         )
     ).group_by(
-        shipmentItem.product_name,
-        shipmentItem.quality
+        ShipmentItem.product_name,
+        ShipmentItem.quality
     ).all()
     
     # 출하 데이터를 딕셔너리로 변환
@@ -291,7 +290,7 @@ def update_daily_inventory_snapshot(
     update_request: UpdateDailyInventorySnapshotRequest,
     company_id: UUID,
     profile_id: UUID
-) -> Tuple[DailyInventorySnapshot, List[shipment], List[shipment]]:
+) -> Tuple[DailyInventorySnapshot, List[Shipment], List[Shipment]]:
     """
     일자별 인벤토리 스냅샷을 수정하고, 필요한 도매/소매 출하 데이터를 생성합니다.
     """
@@ -363,7 +362,7 @@ def update_daily_inventory_snapshot(
         
         # 2.3 도매 출하 데이터 생성
         if wholesale_items:
-            shipment = shipment(
+            shipment = Shipment(
                 title=f"인벤토리 조정 - {center_update.center_id}",
                 creator_id=profile_id,
                 supplier_company_id=company_id,
@@ -376,7 +375,7 @@ def update_daily_inventory_snapshot(
             db.flush()
             
             for item in wholesale_items:
-                shipment_item = shipmentItem(
+                shipment_item = ShipmentItem(
                     shipment_id=shipment.id,
                     product_name=item['product_name'],
                     quantity=item['quantity'],
@@ -390,7 +389,7 @@ def update_daily_inventory_snapshot(
         
         # 2.4 소매 출하 데이터 생성
         if retail_items:
-            shipment = shipment(
+            shipment = Shipment(
                 title=f"인벤토리 조정 - {center_update.center_id}",
                 creator_id=profile_id,
                 supplier_company_id=company_id,
@@ -403,7 +402,7 @@ def update_daily_inventory_snapshot(
             db.flush()
             
             for item in retail_items:
-                shipment_item = shipmentItem(
+                shipment_item = ShipmentItem(
                     shipment_id=shipment.id,
                     product_name=item['product_name'],
                     quantity=item['quantity'],

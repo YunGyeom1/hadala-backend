@@ -47,7 +47,7 @@ class Contract(Base):
     payment_due_date = Column(DateTime(timezone=True)) 
 
     contract_status = Column(Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT)
-    payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
+    payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.UNPAID)
     
     total_price = Column(Float, nullable=False)
     next_contract_id = Column(UUID(as_uuid=True), ForeignKey("contracts.id"))
