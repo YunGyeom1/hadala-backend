@@ -5,28 +5,63 @@ from uuid import UUID
 from app.profile.models import ProfileType, ProfileRole
 
 class ProfileBase(BaseModel):
-    username: str
-    name: str
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    company_id: Optional[UUID] = None
-    role: Optional[str] = None
-
-class ProfileCreate(ProfileBase):
-    type: ProfileType
-    user_id: Optional[UUID] = None
-    
-class ProfileUpdate(BaseModel):
-    username: Optional[str] = None
     name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    
+    # 없는 것: id, user_id, username, role, type, created_at, updated_at
 
-class ProfileResponse(ProfileBase):
+class MyProfileCreate(ProfileBase):
+    username: str
     type: ProfileType
+    
+
+class MyProfileUpdate(ProfileBase):
+    username: Optional[str] = None
+
+
+class MyProfileResponse(ProfileBase):
     id: UUID
+    type: ProfileType
+    username: str
+    company_name: Optional[str] = None
+    role: Optional[ProfileRole] = None
+
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
+class ExternalProfileCreate(ProfileBase):
+    username: str
+    type: ProfileType
+    company_id: Optional[UUID] = None
+    role: Optional[ProfileRole] = None
+
+class ExternalProfileUpdate(ProfileBase):
+    username: Optional[str] = None
+    type: Optional[ProfileType] = None
+    company_id: Optional[UUID] = None
+    role: Optional[ProfileRole] = None
+
+class ProfileResponse(ProfileBase):
+    id: UUID
+    type: ProfileType
+    username: str
+    company_name: Optional[str] = None
+    role: Optional[ProfileRole] = None
+
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProfileRoleUpdate(BaseModel):
     role: ProfileRole
+
+class ProfileCompanyUpdate(BaseModel):
+    profile_id: UUID
+    company_id: UUID
+
+

@@ -4,48 +4,47 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date, or_
 from app.company.shipment_summary.schemas import ShipmentSummary, ShipmentSummaryRow
 from app.transactions.common.models import ProductQuality
-from app.transactions.wholesale_shipment.models import WholesaleShipment, WholesaleShipmentItem
-from app.transactions.retail_shipment.models import RetailShipment, RetailShipmentItem
+from app.transactions.shipment.models import shipment, shipmentItem
 from uuid import UUID
 
 def get_shipment_summary_by_date(db: Session, target_date: date, company_id: UUID) -> ShipmentSummary:
     # 도매 출하 데이터 조회 (내 회사가 공급자이거나 수신자인 경우)
     wholesale_rows = db.query(
-        cast(WholesaleShipment.shipment_datetime, Date).label('shipment_date'),
-        WholesaleShipment.departure_center_id.label('center_id'),
-        WholesaleShipmentItem.product_name,
+        cast(shipment.shipment_datetime, Date).label('shipment_date'),
+        shipment.departure_center_id.label('center_id'),
+        shipmentItem.product_name,
         func.literal('도매').label('shipment_type'),
-        WholesaleShipmentItem.quality,
-        WholesaleShipmentItem.quantity,
-        WholesaleShipment.arrival_center_id.label('destination')
+        shipmentItem.quality,
+        shipmentItem.quantity,
+        shipment.arrival_center_id.label('destination')
     ).join(
-        WholesaleShipmentItem,
-        WholesaleShipment.id == WholesaleShipmentItem.shipment_id
+        shipmentItem,
+        shipment.id == shipmentItem.shipment_id
     ).filter(
-        cast(WholesaleShipment.shipment_datetime, Date) == target_date,
+        cast(shipment.shipment_datetime, Date) == target_date,
         or_(
-            WholesaleShipment.supplier_company_id == company_id,
-            WholesaleShipment.receiver_company_id == company_id
+            shipment.supplier_company_id == company_id,
+            shipment.receiver_company_id == company_id
         )
     ).all()
 
     # 소매 출하 데이터 조회 (내 회사가 공급자이거나 수신자인 경우)
     retail_rows = db.query(
-        cast(RetailShipment.shipment_datetime, Date).label('shipment_date'),
-        RetailShipment.departure_center_id.label('center_id'),
-        RetailShipmentItem.product_name,
+        cast(shipment.shipment_datetime, Date).label('shipment_date'),
+        shipment.departure_center_id.label('center_id'),
+        shipmentItem.product_name,
         func.literal('소매').label('shipment_type'),
-        RetailShipmentItem.quality,
-        RetailShipmentItem.quantity,
-        RetailShipment.arrival_center_id.label('destination')
+        shipmentItem.quality,
+        shipmentItem.quantity,
+        shipment.arrival_center_id.label('destination')
     ).join(
-        RetailShipmentItem,
-        RetailShipment.id == RetailShipmentItem.shipment_id
+        shipmentItem,
+        shipment.id == shipmentItem.shipment_id
     ).filter(
-        cast(RetailShipment.shipment_datetime, Date) == target_date,
+        cast(shipment.shipment_datetime, Date) == target_date,
         or_(
-            RetailShipment.supplier_company_id == company_id,
-            RetailShipment.receiver_company_id == company_id
+            shipment.supplier_company_id == company_id,
+            shipment.receiver_company_id == company_id
         )
     ).all()
 

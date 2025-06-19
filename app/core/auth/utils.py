@@ -13,10 +13,8 @@ def create_token(data: dict, expires_delta: timedelta, secret: str, token_type: 
     })
     return jwt.encode(to_encode, secret, algorithm=settings.ALGORITHM)
 
-
 def create_access_token(data: dict) -> str:
     return create_token(data, timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES), settings.SECRET_KEY, "access")
-
 
 def create_refresh_token(data: dict) -> str:
     return create_token(data, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS), settings.REFRESH_SECRET_KEY, "refresh")

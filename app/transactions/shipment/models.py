@@ -5,15 +5,15 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
-from app.transactions.common.models import PaymentStatus, ShipmentStatus, ProductQuality
+from app.transactions.common.models import ShipmentStatus, ProductQuality
 
-class RetailShipment(Base):
-    __tablename__ = "retail_shipments"
+class Shipment(Base):
+    __tablename__ = "shipments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    contract_id = Column(UUID(as_uuid=True, index=True), ForeignKey("retailcontracts.id"), nullable=False)
     title = Column(String, nullable=False)
     creator_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"), nullable=False)
+    contract_id = Column(UUID(as_uuid=True, index=True), ForeignKey("contracts.id"), nullable=False)
     supplier_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
     supplier_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
     receiver_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
@@ -22,16 +22,14 @@ class RetailShipment(Base):
     departure_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
     arrival_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
     total_price = Column(Float, nullable=False)
-    payment_due_date = Column(DateTime(timezone=True))
     shipment_status = Column(Enum(ShipmentStatus), nullable=False, default=ShipmentStatus.PENDING)
-    payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
     notes = Column(String)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    contract = relationship("RetailContract", back_populates="shipments")
+    contract = relationship("Contract", back_populates="shipments")
     creator = relationship("Profile", foreign_keys=[creator_id])
     supplier_person = relationship("Profile", foreign_keys=[supplier_person_id])
     supplier_company = relationship("Company", foreign_keys=[supplier_company_id])
@@ -39,13 +37,13 @@ class RetailShipment(Base):
     receiver_company = relationship("Company", foreign_keys=[receiver_company_id])
     departure_center = relationship("Center", foreign_keys=[departure_center_id])
     arrival_center = relationship("Center", foreign_keys=[arrival_center_id])
-    items = relationship("RetailShipmentItem", back_populates="shipment", cascade="all, delete-orphan")
+    items = relationship("ShipmentItem", back_populates="shipment", cascade="all, delete-orphan")
 
-class RetailShipmentItem(Base):
-    __tablename__ = "retail_shipment_items"
+class ShipmentItem(Base):
+    __tablename__ = "shipment_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    shipment_id = Column(UUID(as_uuid=True, index=True), ForeignKey("retail_shipments.id"), nullable=False)
+    shipment_id = Column(UUID(as_uuid=True, index=True), ForeignKey("shipments.id"), nullable=False)
     product_name = Column(String, nullable=False)
     quality = Column(Enum(ProductQuality), nullable=False)
     quantity = Column(Integer, nullable=False)
@@ -56,5 +54,5 @@ class RetailShipmentItem(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    shipment = relationship("RetailShipment", back_populates="items")
+    shipment = relationship("Shipment", back_populates="items")
     

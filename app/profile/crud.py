@@ -3,7 +3,31 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.profile.models import Profile, ProfileType, ProfileRole
-from app.profile.schemas import ProfileCreate, ProfileUpdate
+from app.profile.schemas import MyProfileCreate, MyProfileUpdate, DummyProfileCreate, DummyProfileUpdate
+
+def create_my_profile(db: Session, profile: MyProfileCreate, user_id: UUID) -> Profile:
+    """
+    새로운 프로필을 생성합니다.
+    """
+    profile_data = profile.model_dump()
+    profile_data["user_id"] = user_id
+    db_profile = Profile(**profile_data)
+    db.add(db_profile)
+    db.commit()
+    db.refresh(db_profile)
+    return db_profile
+
+def create_dummy_profile(db: Session, profile: DummyProfileCreate) -> Profile:
+    """
+    user_id가 없는 공개 프로필을 생성합니다.
+    """
+    profile_data = profile.model_dump()
+    profile_data["user_id"] = None
+    db_profile = Profile(**profile_data)
+    db.add(db_profile)
+    db.commit()
+    db.refresh(db_profile)
+    return db_profile
 
 def get_profile(db: Session, profile_id: UUID) -> Optional[Profile]:
     """
@@ -28,33 +52,13 @@ def search_profiles(db: Session, username: str, profile_type: ProfileType, skip:
         query = query.filter(Profile.type == profile_type)
     return query.offset(skip).limit(limit).all()
 
-def create_profile(db: Session, profile: ProfileCreate) -> Profile:
+def get_my_profiles_by_user_id(db: Session, user_id: UUID) -> List[Profile]:
     """
-    새로운 프로필을 생성합니다.
+    사용자 ID로 모든 프로필을 조회합니다.
     """
-    db_profile = Profile(**profile.model_dump())
-    db.add(db_profile)
-    db.commit()
-    db.refresh(db_profile)
-    return db_profile
+    return db.query(Profile).filter(Profile.user_id == user_id).all() 
 
-def create_public_profile(db: Session, profile: ProfileCreate) -> Profile:
-    """
-    user_id가 없는 공개 프로필을 생성합니다.
-    """
-    profile_data = profile.model_dump()
-    profile_data["user_id"] = None
-    db_profile = Profile(**profile_data)
-    db.add(db_profile)
-    db.commit()
-    db.refresh(db_profile)
-    return db_profile
-
-def update_profile(
-    db: Session,
-    profile_id: UUID,
-    profile_update: ProfileUpdate
-) -> Profile:
+def update_my_profile(db: Session, profile_id: UUID, profile_update: MyProfileUpdate) -> Profile :
     """
     프로필을 수정합니다.
     """
@@ -70,13 +74,27 @@ def update_profile(
     db.refresh(db_profile)
     return db_profile
 
-def get_profiles_by_user_id(db: Session, user_id: UUID) -> List[Profile]:
+def update_dummy_profile(db: Session, profile_id: UUID, profile_update: DummyProfileUpdate) -> Profile:
     """
-    사용자 ID로 모든 프로필을 조회합니다.
+    공개 프로필을 수정합니다.
     """
-    return db.query(Profile).filter(Profile.user_id == user_id).all() 
+    db_profile = get_profile(db, profile_id)
+    if not db_profile:
+        return None
 
-def update_profile_role(db: Session, profile: Profile, new_role: ProfileRole) -> Profile:    
+    update_data = profile_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_profile, field, value)
+    
+    db.commit()
+    db.refresh(db_profile)
+    return db_profile
+
+def update_profile_role(db: Session, profile_id: UUID, new_role: ProfileRole) -> Profile:    
+    profile = get_profile(db, profile_id)
+    if not profile:
+        return None
+    
     profile.role = new_role
     db.commit()
     db.refresh(profile)

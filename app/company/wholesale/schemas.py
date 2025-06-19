@@ -15,6 +15,7 @@ class WholesaleCompanyDetailBase(BaseModel):
     representative: Optional[str] = None
     business_registration_number: Optional[str] = None
     established_year: Optional[int] = None
+    
     monthly_transaction_volume: Optional[float] = None
     daily_transport_capacity: Optional[float] = None
     main_products: Optional[str] = None
@@ -28,6 +29,7 @@ class WholesaleCompanyDetailUpdate(WholesaleCompanyDetailBase):
     pass
 
 class WholesaleCompanyDetailResponse(WholesaleCompanyDetailBase):
+
     class Config:
         from_attributes = True
 

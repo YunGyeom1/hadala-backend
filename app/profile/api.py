@@ -11,9 +11,9 @@ from app.core.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
-@router.post("/me", response_model=schemas.ProfileResponse)
+@router.post("/me", response_model=schemas.MyProfileResponse)
 def create_profile(
-    profile: schemas.ProfileCreate,
+    profile: schemas.MyProfileCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -27,20 +27,24 @@ def create_profile(
             detail="이미 사용 중인 username입니다"
         )
     
-    profile.user_id = current_user.id
-    return crud.create_profile(db, profile)
+    return crud.create_my_profile(db, profile, current_user.id)
 
 @router.post("/public", response_model=schemas.ProfileResponse)
 def create_public_profile(
-    profile: schemas.ProfileCreate,
+    profile: schemas.ExternalProfileCreate,
     db: Session = Depends(get_db)
 ):
     """
     user_id가 없는 공개 프로필을 생성합니다.
     """
-    return crud.create_public_profile(db, profile)
+    if crud.get_profile_by_username(db, profile.username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 사용 중인 username입니다"
+        )
+    return crud.create_dummy_profile(db, profile)
 
-@router.get("/me", response_model=List[schemas.ProfileResponse])
+@router.get("/me", response_model=List[schemas.MyProfileResponse])
 def get_my_profiles(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -48,7 +52,7 @@ def get_my_profiles(
     """
     로그인한 사용자의 모든 프로필을 조회합니다.
     """
-    return crud.get_profiles_by_user_id(db, current_user.id)
+    return crud.get_my_profiles_by_user_id(db, current_user.id)
 
 @router.get("/search", response_model=List[schemas.ProfileResponse])
 def search_profiles(
@@ -79,10 +83,10 @@ def get_profile(
         )
     return profile 
 
-@router.put("/{profile_id}", response_model=schemas.ProfileResponse)
-def update_profile(
+@router.put("/{profile_id}", response_model=schemas.MyProfileResponse)
+def update_my_profile(
     profile_id: UUID,
-    profile_update: schemas.ProfileUpdate,
+    profile_update: schemas.MyProfileUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -101,7 +105,7 @@ def update_profile(
             detail="해당 프로필에 대한 접근 권한이 없습니다"
         )
 
-    return crud.update_profile(db, profile_id, profile_update)
+    return crud.update_my_profile(db, profile_id, profile_update)
 
 @router.put("/{profile_id}/role", response_model=schemas.ProfileResponse)
 def update_profile_role(
@@ -114,8 +118,9 @@ def update_profile_role(
     if not profile or not profile.company_id:
         raise HTTPException(status_code=404, detail="프로필 또는 회사 정보가 없습니다")
 
-    # 현재 로그인한 사용자가 같은 회사의 owner인지 확인
-    if profile.company_id != current_profile.company_id or current_profile.role != "owner":
-        raise HTTPException(status_code=403, detail="권한이 없습니다")
+    # user_id가 연결되지 않은 External Profile이거나, 현재 로그인한 사용자가 같은 회사의 owner인지 확인
+    if profile.user_id:
+        if profile.company_id != current_profile.company_id or current_profile.role != "owner":
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
 
-    return crud.update_profile_role(db, profile, new_role.role)
+    return crud.update_profile_role(db, profile.id, new_role.role) 

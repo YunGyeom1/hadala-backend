@@ -3,16 +3,23 @@ from typing import Optional, List
 from .models import CompanyType
 from app.profile.models import ProfileRole
 
-class CompanyCreate(BaseModel):
+
+class CompanyBase(BaseModel):
     name: str
     type: CompanyType
 
-class CompanyUpdate(BaseModel):
+class CompanyCreate(CompanyBase):
+    pass
+
+class CompanyUpdate(CompanyBase):
     name: Optional[str] = None
+    type: Optional[CompanyType] = None
+    pass
 
-class CompanyResponse(BaseModel):
-    name: str
-    type: CompanyType
+
+class CompanyResponse(CompanyBase):
+    id: UUID4
+    wholesale_company_detail_id: Optional[UUID4] = None
 
     class Config:
         from_attributes = True

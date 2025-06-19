@@ -37,12 +37,12 @@ async def verify_refresh_token(data: schemas.VerifyRefreshTokenRequest):
         return schemas.VerifyRefreshTokenResponse(valid=False, error=str(e))
 
 
-@router.post("/refresh", response_model=schemas.RefreshTokenResponse)
-async def refresh_token(data: schemas.RefreshTokenRequest):
+@router.post("/refresh", response_model=schemas.AccessTokenResponse)
+async def refresh_token(data: schemas.AccessTokenRequest):
     try:
         token_data = utils.verify_refresh_token(data.refresh_token)
         new_access_token = utils.create_access_token({"sub": token_data["sub"]})
-        return schemas.RefreshTokenResponse(access_token=new_access_token)
+        return schemas.AccessTokenResponse(access_token=new_access_token)
     except Exception as e:
         raise HTTPException(
             status_code=401,
