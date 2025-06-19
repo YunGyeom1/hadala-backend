@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 from app.database.base import Base
 from app.transactions.common.models import ProductQuality
 
-class CenterInvenrSnapshotItem(Base):
+class CenterInventorySnapshotItem(Base):
     __tablename__ = "center_snapshot_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -22,7 +22,7 @@ class CenterInvenrSnapshotItem(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
-    center_inventory = relationship("CenterInventory", back_populates="items")
+    center_inventory_snapshot = relationship("CenterInventorySnapshot", back_populates="items")
 
 class CenterInventorySnapshot(Base):
     __tablename__ = "center_inventory_snapshots"
@@ -40,4 +40,4 @@ class CenterInventorySnapshot(Base):
 
     # Relationships
     center = relationship("Center", back_populates="snapshots")
-    items = relationship("CenterSnapshotItem", back_populates="center_inventory")
+    items = relationship("CenterInventorySnapshotItem", back_populates="center_inventory_snapshot")

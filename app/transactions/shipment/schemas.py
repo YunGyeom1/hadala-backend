@@ -10,42 +10,47 @@ class ShipmentItemBase(BaseModel):
     quality: ProductQuality
     quantity: int
     unit_price: float
+    total_price: float
+
+    # 없는 것: id, shipment_id
 
 class ShipmentItemCreate(ShipmentItemBase):
-    pass
+    shipment_id: UUID4
 
 class ShipmentItemResponse(ShipmentItemBase):
     id: UUID4
-    total_price: float
 
+    updated_at: datetime
+    created_at: datetime
     class Config:
         from_attributes = True
 
 class ShipmentBase(BaseModel):
     title: str
-    contract_id: UUID4
-    supplier_person_username: Optional[str] = None
-    supplier_company_name: Optional[str] = None
-    receiver_person_username: Optional[str] = None
-    receiver_company_name: Optional[str] = None
-    shipment_datetime: datetime
-    departure_center_name: Optional[str] = None
-    arrival_center_name: Optional[str] = None
-    shipment_status: Optional[ShipmentStatus] = ShipmentStatus.PENDING
     notes: Optional[str] = None
+    contract_id: UUID4
+
+    supplier_person_id: Optional[UUID4] = None
+    supplier_company_id: Optional[UUID4] = None
+    receiver_person_id: Optional[UUID4] = None
+    receiver_company_id: Optional[UUID4] = None
+    departure_center_id: Optional[UUID4] = None
+    arrival_center_id: Optional[UUID4] = None
+    
+    shipment_datetime: datetime
+    shipment_status: Optional[ShipmentStatus] = ShipmentStatus.PENDING
+    
+    #없는거: id, creator_id, items
 
 class ShipmentCreate(ShipmentBase):
     items: List[ShipmentItemCreate]
 
 class ShipmentUpdate(ShipmentBase):
-    title: Optional[str] = None
     items: Optional[List[ShipmentItemCreate]] = None
 
 class ShipmentResponse(ShipmentBase):
     id: UUID4
-    total_price: float
-    creator_username: str
-    shipment_status: ShipmentStatus
+    creator_id: UUID4
     items: List[ShipmentItemResponse]
 
     class Config:

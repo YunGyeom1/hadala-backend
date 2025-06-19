@@ -2,7 +2,9 @@ from pydantic import BaseModel, UUID4
 from typing import Optional, List
 from .models import CompanyType
 from app.profile.models import ProfileRole
-
+from app.company.detail.wholesale.schemas import WholesaleCompanyDetailResponse
+from app.company.detail.retail.schemas import RetailCompanyDetailResponse
+from app.company.detail.farmer.schemas import FarmerCompanyDetailResponse
 
 class CompanyBase(BaseModel):
     name: str
@@ -19,7 +21,9 @@ class CompanyUpdate(CompanyBase):
 
 class CompanyResponse(CompanyBase):
     id: UUID4
-    wholesale_company_detail_id: Optional[UUID4] = None
+    wholesale_company_detail: Optional[WholesaleCompanyDetailResponse] = None
+    retail_company_detail: Optional[RetailCompanyDetailResponse] = None
+    farm_company_detail: Optional[FarmerCompanyDetailResponse] = None
 
     class Config:
         from_attributes = True
@@ -36,3 +40,4 @@ class CompanyCenterAdd(BaseModel):
 
 class CompanyCenterRemove(BaseModel):
     center_id: UUID4 
+

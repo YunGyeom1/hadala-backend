@@ -17,10 +17,10 @@ class VerifyRefreshTokenResponse(BaseModel):
     valid: bool
     error: Optional[str] = None
 
-class RefreshTokenRequest(BaseModel):
+class AccessTokenRequest(BaseModel):
     refresh_token: str
 
-class RefreshTokenResponse(BaseModel):
+class AccessTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 

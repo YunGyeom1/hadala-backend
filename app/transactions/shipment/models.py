@@ -11,19 +11,22 @@ class Shipment(Base):
     __tablename__ = "shipments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
     title = Column(String, nullable=False)
-    creator_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"), nullable=False)
+    notes = Column(String)
+    
     contract_id = Column(UUID(as_uuid=True, index=True), ForeignKey("contracts.id"), nullable=False)
+    
+    creator_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"), nullable=False)
     supplier_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
     supplier_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
     receiver_person_id = Column(UUID(as_uuid=True, index=True), ForeignKey("profiles.id"))
     receiver_company_id = Column(UUID(as_uuid=True, index=True), ForeignKey("companies.id"))
-    shipment_datetime = Column(DateTime(timezone=True))
     departure_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
     arrival_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"), index=True)
-    total_price = Column(Float, nullable=False)
+    
+    shipment_datetime = Column(DateTime(timezone=True))
     shipment_status = Column(Enum(ShipmentStatus), nullable=False, default=ShipmentStatus.PENDING)
-    notes = Column(String)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -44,6 +47,7 @@ class ShipmentItem(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     shipment_id = Column(UUID(as_uuid=True, index=True), ForeignKey("shipments.id"), nullable=False)
+    
     product_name = Column(String, nullable=False)
     quality = Column(Enum(ProductQuality), nullable=False)
     quantity = Column(Integer, nullable=False)

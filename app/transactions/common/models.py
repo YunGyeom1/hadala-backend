@@ -10,9 +10,10 @@ class ContractStatus(enum.Enum):
     COMPLETED = "completed"
 
 class PaymentStatus(enum.Enum):
-    PENDING = "pending"
+    UNPAID = "unpaid"
+    PREPARED = "prepared"
+    OVERDUE = "overdue"
     PAID = "paid"
-    FAILED = "failed"
     REFUNDED = "refunded"
     CANCELLED = "cancelled"
 

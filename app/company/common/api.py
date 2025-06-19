@@ -12,7 +12,7 @@ from app.company.center.schemas import CenterCreate, CenterResponse
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
-@router.post("", response_model=schemas.CompanyResponse)
+@router.post("/create", response_model=schemas.CompanyResponse)
 def create_company(
     company: schemas.CompanyCreate,
     current_profile: Profile = Depends(get_current_profile),
@@ -205,28 +205,3 @@ def add_company_center(
 
     
     return create_center(db, company_id, center_add)
-
-
-#TODO: 집하 기록이 있을 경우 제거 불가, deactivate 처리만 가능
-@router.delete("/{company_id}/centers/{center_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_company_center(
-    company_id: UUID,
-    center_id: UUID,
-    current_profile: Profile = Depends(get_current_profile),
-    db: Session = Depends(get_db)
-):
-    """
-    회사에서 센터를 제거합니다.
-    """
-    company = crud.get_company_by_id(db, company_id)
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="회사를 찾을 수 없습니다"
-        )
-    if company.owner_id != current_profile.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 회사에 대한 센터 제거 권한이 없습니다"
-        )
-    return remove_center(db, center_id)

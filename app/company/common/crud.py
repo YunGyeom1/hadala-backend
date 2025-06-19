@@ -7,13 +7,25 @@ from app.profile.models import ProfileRole
 from app.profile.crud import get_profile
 from app.profile.models import Profile
 
-def search_companies(
+def create_company(
     db: Session,
-    name: Optional[str] = None,
-    company_type: Optional[CompanyType] = None,
-    skip: int = 0,
-    limit: int = 10
-) -> List[Company]:
+    company: schemas.CompanyCreate,
+    owner_id: UUID
+) -> Company:
+    """
+    새로운 회사를 생성합니다.
+    """
+    db_company = Company(
+        name=company.name,
+        type=company.type,
+        owner_id=owner_id
+    )
+    db.add(db_company)
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+
+def search_companies(db: Session, name: Optional[str] = None, company_type: Optional[CompanyType] = None, skip: int = 0, limit: int = 10) -> List[Company]:
     """
     회사를 검색합니다.
     """
@@ -37,24 +49,6 @@ def get_company_by_name(db: Session, name: str) -> Optional[Company]:
     이름으로 회사를 조회합니다.
     """
     return db.query(Company).filter(Company.name == name).first()
-
-def create_company(
-    db: Session,
-    company: schemas.CompanyCreate,
-    owner_id: UUID
-) -> Company:
-    """
-    새로운 회사를 생성합니다.
-    """
-    db_company = Company(
-        name=company.name,
-        type=CompanyType.wholesaler,
-        owner_id=owner_id
-    )
-    db.add(db_company)
-    db.commit()
-    db.refresh(db_company)
-    return db_company
 
 def update_company(
     db: Session,

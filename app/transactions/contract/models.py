@@ -12,6 +12,7 @@ class ContractItem(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     contract_id = Column(UUID(as_uuid=True), ForeignKey("contracts.id"), nullable=False)
+    
     product_name = Column(String, nullable=False)  # 작물명
     quality = Column(Enum(ProductQuality), nullable=False)  # 퀄리티
     quantity = Column(Float, nullable=False)  # 양
@@ -29,7 +30,10 @@ class Contract(Base):
     __tablename__ = "contracts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
     title = Column(String, nullable=False)
+    notes = Column(String, nullable=True)
+    
     creator_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False)
     supplier_contractor_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
     supplier_company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
@@ -37,14 +41,17 @@ class Contract(Base):
     receiver_company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
     departure_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"))
     arrival_center_id = Column(UUID(as_uuid=True), ForeignKey("centers.id"))
-    delivery_datetime = Column(DateTime(timezone=True))
+    
     contract_datetime = Column(DateTime(timezone=True))
-    total_price = Column(Float, nullable=False)
-    payment_due_date = Column(DateTime(timezone=True))
+    delivery_datetime = Column(DateTime(timezone=True))
+    payment_due_date = Column(DateTime(timezone=True)) 
+
     contract_status = Column(Enum(ContractStatus), nullable=False, default=ContractStatus.DRAFT)
     payment_status = Column(Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
-    notes = Column(String, nullable=True)
+    
+    total_price = Column(Float, nullable=False)
     next_contract_id = Column(UUID(as_uuid=True), ForeignKey("contracts.id"))
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

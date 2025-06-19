@@ -1,13 +1,13 @@
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.orm import Session
-from app.company.wholesale.models import WholesaleCompanyDetail
+from app.company.detail.wholesale.models import WholesaleCompanyDetail
 from . import schemas
 from datetime import date, timedelta
 
-from app.company.inventory.crud import get_center_inventory_snapshots_by_date
-from app.company.inventory.schemas import CenterInventorySnapshotResponse
-from app.company.inventory.crud import generate_center_inventory_snapshot
+from app.company.inventory_snapshot.crud import get_center_inventory_snapshots_by_date
+from app.company.inventory_snapshot.schemas import CenterInventorySnapshotResponse
+from app.company.inventory_snapshot.crud import generate_center_inventory_snapshot
 from app.company.center.models import Center
 
 def create_wholesale_company_detail(
@@ -114,8 +114,8 @@ def search_company_inventory_snapshots(
     # 자동 생성이 활성화된 경우, 없는 날짜의 스냅샷 생성
     if auto_generate:
         # 회사의 모든 집하장 조회
-        centers = db.query(CollectionCenter).filter(
-            CollectionCenter.company_id == company_id
+        centers = db.query(Center).filter(
+            Center.company_id == company_id
         ).all()
         
         # 날짜 범위 내의 모든 날짜에 대해

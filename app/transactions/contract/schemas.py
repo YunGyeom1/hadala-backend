@@ -10,31 +10,40 @@ class ContractItemBase(BaseModel):
     quality: ProductQuality
     quantity: int
     unit_price: float
+    total_price: float
+
+    # 없는 것: id, contract_id
 
 class ContractItemCreate(ContractItemBase):
-    pass
+    contract_id: UUID4
 
 class ContractItemResponse(ContractItemBase):
     id: UUID4
-    total_price: float
 
+    updated_at: datetime
+    created_at: datetime
     class Config:
         from_attributes = True
 
 class ContractBase(BaseModel):
     title: str
-    supplier_person_username: Optional[str] = None
-    supplier_company_name: Optional[str] = None
-    receiver_person_username: Optional[str] = None
-    receiver_company_name: Optional[str] = None
-    departure_center_name: Optional[str] = None
-    arrival_center_name: Optional[str] = None
+    notes: Optional[str] = None
+
+    supplier_contractor_id: Optional[UUID4] = None
+    supplier_company_id: Optional[UUID4] = None
+    receiver_contractor_id: Optional[UUID4] = None
+    receiver_company_id: Optional[UUID4] = None
+    departure_center_id: Optional[UUID4] = None
+    arrival_center_id: Optional[UUID4] = None
+    
     delivery_datetime: Optional[datetime] = None
     contract_datetime: Optional[datetime] = None
     payment_due_date: Optional[datetime] = None
+    
     contract_status: Optional[ContractStatus] = ContractStatus.DRAFT
     payment_status: Optional[PaymentStatus] = PaymentStatus.PENDING
-    notes: Optional[str] = None
+    
+    #없는거: id, total_price, creator_id, next_contract_id, items
 
 class ContractCreate(ContractBase):
     items: List[ContractItemCreate]
@@ -46,8 +55,9 @@ class ContractUpdate(ContractBase):
 class ContractResponse(ContractBase):
     id: UUID4
     total_price: float
-    creator_username: str
-    contract_status: ContractStatus
+    creator_id: UUID4
+    next_contract_id: Optional[UUID4] = None
+    total_price: float
     items: List[ContractItemResponse]
 
     class Config:

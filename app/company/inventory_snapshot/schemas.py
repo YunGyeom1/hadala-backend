@@ -39,3 +39,37 @@ class UpdateCenterInventorySnapshotRequest(BaseModel):
 class UpdateDailyInventorySnapshotRequest(BaseModel):
     snapshot_date: date
     centers: List[UpdateCenterInventorySnapshotRequest]
+
+
+class CompanyInventorySnapshot(BaseModel):
+    """회사 전체의 일일 재고 스냅샷"""
+    snapshot_date: date
+    center_snapshots: List[CenterInventorySnapshot]
+
+    class Config:
+        from_attributes = True
+
+class PaginatedCompanyInventorySnapshot(BaseModel):
+    """페이지네이션된 회사 재고 스냅샷 응답"""
+    items: List[CompanyInventorySnapshot]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+    @classmethod
+    def create(
+        cls,
+        items: List[CompanyInventorySnapshot],
+        total: int,
+        page: int,
+        page_size: int
+    ) -> "PaginatedCompanyInventorySnapshot":
+        total_pages = (total + page_size - 1) // page_size
+        return cls(
+            items=items,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )

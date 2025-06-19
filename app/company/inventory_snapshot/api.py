@@ -2,12 +2,12 @@ from datetime import date
 from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from app.company.inventory.schemas import (
+from app.company.inventory_snapshot.schemas import (
     DailyInventorySnapshot,
     UpdateDailyInventorySnapshotRequest,
     CenterInventorySnapshot
 )
-from app.company.inventory.crud import (
+from app.company.inventory_snapshot.crud import (
     get_daily_company_inventory_snapshot,
     get_daily_company_inventory_snapshots_by_date_range,
     get_daily_center_inventory_snapshot,

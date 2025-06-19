@@ -1,15 +1,15 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.transactions.retail_contract import models as retail_models
 from app.profile.models import Profile
 from uuid import UUID
+from app.transactions.contract.models import Contract
 
 def check_contract_access(
     db: Session,
     contract_id: UUID,
     profile: Profile,
     require_ownership: bool = False
-) -> retail_models.RetailContract:
+) -> Contract:
     """
     계약에 대한 접근 권한을 검사합니다.
     
@@ -32,8 +32,8 @@ def check_contract_access(
             detail="회사 소속이 아닙니다"
         )
     
-    contract = db.query(retail_models.RetailContract).filter(
-        retail_models.RetailContract.id == contract_id
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id
     ).first()
     
     if not contract:

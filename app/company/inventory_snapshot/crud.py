@@ -2,12 +2,12 @@ from datetime import date
 from typing import List, Dict, Tuple, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date, and_
-from app.company.inventory.schemas import (
+from app.company.inventory_snapshot.schemas import (
     DailyInventorySnapshot, CenterInventorySnapshot, InventorySnapshotItem,
     UpdateDailyInventorySnapshotRequest, UpdateInventorySnapshotItemRequest
 )
-from app.company.inventory.models import CenterInventorySnapshot as CenterInventorySnapshotModel
-from app.company.inventory.models import CenterInvenrSnapshotItem as CenterInventorySnapshotItemModel
+from app.company.inventory_snapshot.models import CenterInventorySnapshot as CenterInventorySnapshotModel
+from app.company.inventory_snapshot.models import CenterInvenrSnapshotItem as CenterInventorySnapshotItemModel
 from app.transactions.shipment.models import shipment, shipmentItem
 from app.transactions.shipment.models import shipment, shipmentItem
 from uuid import UUID
