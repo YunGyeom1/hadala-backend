@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from app.profile.models import ProfileType, ProfileRole
 from app.core.auth.utils import create_access_token
-from tests.factories import UserFactory, CompanyFactory, ProfileFactory, TestDataFactory
+from tests.factories import UserFactory, CompanyFactory, TestDataFactory
 
 
 class TestProfileAPI:
@@ -267,7 +267,7 @@ class TestProfileAPI:
         role_data = {"role": ProfileRole.manager.value}
         role_headers = {
             **headers,
-            "current-profile-id": str(owner_profile.id)
+            "X-Profile-ID": str(owner_profile.id)
         }
         
         response = client.put(f"/profile/{owner_profile.id}/role", json=role_data, headers=role_headers)

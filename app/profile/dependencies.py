@@ -9,7 +9,7 @@ from app.core.auth.dependencies import get_current_user
 
 
 async def get_current_profile(
-    current_profile_id: Optional[UUID] = Header(None, description="현재 사용 중인 프로필 ID"),
+    current_profile_id: Optional[UUID] = Header(None, alias="X-Profile-ID", description="현재 사용 중인 프로필 ID"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

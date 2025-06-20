@@ -1,7 +1,6 @@
 from pydantic import BaseModel, UUID4, ConfigDict
-from typing import Optional, List
-from datetime import datetime, date
-from app.company.common.models import CompanyType
+from typing import Optional
+from datetime import datetime
 
 class FarmerCompanyDetailBase(BaseModel):
     address: Optional[str] = None
@@ -32,4 +31,4 @@ class FarmerCompanyDetailResponse(FarmerCompanyDetailBase):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True) 

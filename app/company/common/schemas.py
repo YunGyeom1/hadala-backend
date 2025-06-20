@@ -25,7 +25,7 @@ class CompanyResponse(CompanyBase):
     retail_company_detail: Optional[RetailCompanyDetailResponse] = None
     farm_company_detail: Optional[FarmerCompanyDetailResponse] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 class CompanyOwnerUpdate(BaseModel):
     new_owner_id: UUID4

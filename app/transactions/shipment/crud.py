@@ -12,6 +12,7 @@ from app.transactions.shipment.schemas import (
 )
 from app.profile.models import Profile
 from app.company.common.models import Company
+from app.transactions.common.models import ShipmentStatus
 
 def get_shipment(db: Session, shipment_id: UUID) -> Optional[Shipment]:
     """특정 출하 데이터를 조회합니다."""
@@ -50,7 +51,9 @@ def get_shipments(
     if end_date:
         query = query.filter(Shipment.shipment_datetime <= end_date)
     if shipment_status:
-        query = query.filter(Shipment.shipment_status == shipment_status)
+        # Enum 변환
+        status_enum = ShipmentStatus(shipment_status) if isinstance(shipment_status, str) else shipment_status
+        query = query.filter(Shipment.shipment_status == status_enum)
     
     # 전체 개수 조회
     total = query.count()
@@ -203,7 +206,7 @@ def get_shipment_with_details(db: Session, shipment_id: UUID) -> Optional[Shipme
                 unit_price=item.unit_price,
                 total_price=item.total_price,
                 created_at=item.created_at,
-                updated_at=item.updated_at
+                updated_at=item.updated_at if item.updated_at is not None else item.created_at
             ) for item in shipment.items
         ]
     ) 

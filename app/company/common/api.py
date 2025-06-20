@@ -41,7 +41,7 @@ def search_companies(
     """
     return crud.search_companies(db, name, company_type, skip, limit)
 
-@router.get("/me", response_model=List[schemas.CompanyResponse])
+@router.get("/me", response_model=schemas.CompanyResponse)
 def get_my_company(
     current_profile: Profile = Depends(get_current_profile),
     db: Session = Depends(get_db)
@@ -147,16 +147,18 @@ def add_company_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 회사에 대한 사용자 추가 권한이 없습니다"
         )
-    if user_add.role.value != company.type.value:
+    # 프로필 타입과 회사 타입이 일치하는지 확인
+    profile = db.query(Profile).filter(Profile.id == user_add.profile_id).first()
+    if not profile or profile.type.value != company.type.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="회사 타입과 사용자 역할이 일치하지 않습니다"
+            detail="회사 타입과 사용자 프로필 타입이 일치하지 않습니다"
         )
 
     return crud.add_company_user(db, company_id, user_add.profile_id, user_add.role)
 
 
-@router.delete("/{company_id}/users/{user_id}", response_model=schemas.CompanyResponse)
+@router.delete("/{company_id}/users/{user_id}", response_model=ProfileResponse)
 def remove_company_user(
     company_id: UUID,
     user_id: UUID,
@@ -178,7 +180,7 @@ def remove_company_user(
             detail="해당 회사에 대한 사용자 제거 권한이 없습니다"
         )
     
-    return crud.remove_company_user(db, company_id, user_id) 
+    return crud.remove_company_user(db, company_id, user_id)
 
 
 @router.post("/{company_id}/centers", response_model=CenterResponse)

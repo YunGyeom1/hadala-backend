@@ -37,4 +37,4 @@ class SummaryResponse(SummaryBase):
     daily_summaries: List[DailySummary]
 
 class SummaryRequest(SummaryBase):
-    company_id: UUID
+    company_id: Optional[UUID] = None

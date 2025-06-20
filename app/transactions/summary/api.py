@@ -8,7 +8,7 @@ from app.transactions.summary import services
 from app.profile.dependencies import get_current_profile
 from app.profile.models import Profile
 
-router = APIRouter()
+router = APIRouter(prefix="/summary", tags=["summary"])
 
 @router.post("/daily-summary", response_model=SummaryResponse)
 def get_daily_summary_by_request(

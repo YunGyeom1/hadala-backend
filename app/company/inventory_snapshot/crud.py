@@ -1,5 +1,5 @@
-from datetime import date
-from typing import List, Tuple
+from datetime import date, timedelta
+from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date, and_
 from app.company.inventory_snapshot.schemas import (
@@ -10,6 +10,7 @@ from app.company.inventory_snapshot.models import CenterInventorySnapshot as Cen
 from app.company.inventory_snapshot.models import CenterInventorySnapshotItem as CenterInventorySnapshotItemModel
 from app.transactions.shipment.models import Shipment, ShipmentItem
 from uuid import UUID
+import uuid
 
 def get_daily_company_inventory_snapshot(
     db: Session,
@@ -75,26 +76,44 @@ def get_daily_center_inventory_snapshot(
     target_date: date,
     company_id: UUID,
     center_id: UUID
-) -> CenterInventorySnapshot:
+) -> Optional[CenterInventorySnapshot]:
     snapshot = db.query(CenterInventorySnapshotModel).filter(
         CenterInventorySnapshotModel.snapshot_date == target_date,
         CenterInventorySnapshotModel.company_id == company_id,
         CenterInventorySnapshotModel.center_id == center_id
     ).first()
+    if not snapshot:
+        return None
+
+    # 아이템 변환
+    items = db.query(CenterInventorySnapshotItemModel).filter(
+        CenterInventorySnapshotItemModel.center_inventory_snapshot_id == snapshot.id
+    ).all()
+    snapshot_items = [
+        InventorySnapshotItem(
+            product_name=item.product_name,
+            quality=item.quality,
+            quantity=item.quantity,
+            unit_price=item.unit_price,
+            total_price=item.total_price
+        ) for item in items
+    ]
 
     return CenterInventorySnapshot(
         center_id=snapshot.center_id,
         center_name=snapshot.center.name,
         total_quantity=snapshot.total_quantity,
         total_price=snapshot.total_price,
-        items=snapshot.items
+        items=snapshot_items
     )
 
 def create_daily_center_inventory_snapshot(
     db: Session,
     target_date: date,
     company_id: UUID,
-    center_id: UUID
+    center_id: UUID,
+    creator_id: UUID,
+    contract_id: UUID = None
 ) -> CenterInventorySnapshot:
     """
     전날 데이터와 오늘 출하 데이터를 합산하여 오늘의 스냅샷을 생성합니다.
@@ -180,7 +199,7 @@ def create_daily_center_inventory_snapshot(
         shipment_items[key]['total_price'] -= item.total_quantity * item.avg_unit_price
     
     # 전날 스냅샷 조회
-    previous_date = target_date.replace(day=target_date.day - 1)
+    previous_date = target_date - timedelta(days=1)
     previous_snapshot = get_daily_center_inventory_snapshot(db, previous_date, company_id, center_id)
     
     # 스냅샷 생성 또는 업데이트
@@ -216,6 +235,7 @@ def create_daily_center_inventory_snapshot(
             new_total_price = new_quantity * new_unit_price
             
             new_item = CenterInventorySnapshotItemModel(
+                id=uuid.uuid4(),
                 center_inventory_snapshot_id=center_snapshot.id,
                 product_name=item.product_name,
                 quantity=new_quantity,
@@ -249,6 +269,7 @@ def create_daily_center_inventory_snapshot(
             new_total_price = new_quantity * new_unit_price
             
             new_item = CenterInventorySnapshotItemModel(
+                id=uuid.uuid4(),
                 center_inventory_snapshot_id=center_snapshot.id,
                 product_name=product_name,
                 quantity=new_quantity,
@@ -289,7 +310,8 @@ def update_daily_inventory_snapshot(
     db: Session,
     update_request: UpdateDailyInventorySnapshotRequest,
     company_id: UUID,
-    profile_id: UUID
+    profile_id: UUID,
+    contract_id: UUID = None
 ) -> Tuple[DailyInventorySnapshot, List[Shipment], List[Shipment]]:
     """
     일자별 인벤토리 스냅샷을 수정하고, 필요한 도매/소매 출하 데이터를 생성합니다.
@@ -367,13 +389,12 @@ def update_daily_inventory_snapshot(
                 creator_id=profile_id,
                 supplier_company_id=company_id,
                 departure_center_id=center_update.center_id,
-                total_price=total_wholesale_price,
-                status="completed",
-                shipment_date=update_request.snapshot_date
+                shipment_status="completed",
+                shipment_datetime=update_request.snapshot_date,
+                contract_id=contract_id
             )
             db.add(shipment)
             db.flush()
-            
             for item in wholesale_items:
                 shipment_item = ShipmentItem(
                     shipment_id=shipment.id,
@@ -384,9 +405,7 @@ def update_daily_inventory_snapshot(
                     total_price=item['total_price']
                 )
                 db.add(shipment_item)
-            
             created_shipments.append(shipment)
-        
         # 2.4 소매 출하 데이터 생성
         if retail_items:
             shipment = Shipment(
@@ -394,13 +413,12 @@ def update_daily_inventory_snapshot(
                 creator_id=profile_id,
                 supplier_company_id=company_id,
                 departure_center_id=center_update.center_id,
-                total_price=total_retail_price,
-                status="completed",
-                shipment_date=update_request.snapshot_date
+                shipment_status="completed",
+                shipment_datetime=update_request.snapshot_date,
+                contract_id=contract_id
             )
             db.add(shipment)
             db.flush()
-            
             for item in retail_items:
                 shipment_item = ShipmentItem(
                     shipment_id=shipment.id,
@@ -411,7 +429,6 @@ def update_daily_inventory_snapshot(
                     total_price=item['total_price']
                 )
                 db.add(shipment_item)
-            
             created_shipments.append(shipment)
         
         # 2.5 센터 스냅샷 업데이트
@@ -419,14 +436,34 @@ def update_daily_inventory_snapshot(
         db_snapshot.total_price = sum(item.quantity * item.unit_price for item in center_update.items)
     
     # 3. 이후 날짜의 스냅샷들 업데이트
-    next_date = update_request.snapshot_date
-    while True:
-        # 다음 날짜의 스냅샷 생성 또는 조회
-        next_snapshot = create_daily_center_inventory_snapshot(db, next_date, company_id, center_update.center_id)
-        if not next_snapshot:  # 더 이상 스냅샷이 없으면 종료
+    # 향후 30일까지만 업데이트하도록 제한
+    max_future_days = 30
+    next_date = update_request.snapshot_date + timedelta(days=1)
+    days_processed = 0
+    
+    # 업데이트된 모든 센터 ID 수집
+    updated_center_ids = [center_update.center_id for center_update in update_request.centers]
+    
+    while days_processed < max_future_days:
+        # 모든 센터에 대해 다음 날짜의 스냅샷이 존재하는지 확인
+        existing_snapshots = db.query(CenterInventorySnapshotModel).filter(
+            and_(
+                CenterInventorySnapshotModel.snapshot_date == next_date,
+                CenterInventorySnapshotModel.company_id == company_id,
+                CenterInventorySnapshotModel.center_id.in_(updated_center_ids)
+            )
+        ).all()
+        
+        if not existing_snapshots:
+            # 더 이상 미래의 스냅샷이 없으면 종료
             break
             
-        next_date = next_date.replace(day=next_date.day + 1)
+        # 각 센터의 기존 스냅샷을 업데이트
+        for center_id in updated_center_ids:
+            create_daily_center_inventory_snapshot(db, next_date, company_id, center_id, profile_id, contract_id=contract_id)
+        
+        next_date = next_date + timedelta(days=1)
+        days_processed += 1
     
     db.commit()
     

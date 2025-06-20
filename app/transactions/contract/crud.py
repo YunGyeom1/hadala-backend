@@ -12,6 +12,7 @@ from app.transactions.contract.schemas import (
 )
 from app.profile.models import Profile
 from app.company.common.models import Company
+from app.transactions.common.models import ContractStatus
 
 def get_contract(db: Session, contract_id: UUID) -> Optional[Contract]:
     """특정 계약 데이터를 조회합니다."""
@@ -49,7 +50,26 @@ def get_contracts(
     if end_date:
         query = query.filter(Contract.contract_datetime <= end_date)
     if contract_status:
-        query = query.filter(Contract.contract_status == contract_status)
+        # Enum 값으로 직접 비교
+        if isinstance(contract_status, str):
+            # 문자열로 전달된 경우 Enum으로 변환
+            if contract_status == "draft":
+                query = query.filter(Contract.contract_status == ContractStatus.DRAFT)
+            elif contract_status == "pending":
+                query = query.filter(Contract.contract_status == ContractStatus.PENDING)
+            elif contract_status == "approved":
+                query = query.filter(Contract.contract_status == ContractStatus.APPROVED)
+            elif contract_status == "rejected":
+                query = query.filter(Contract.contract_status == ContractStatus.REJECTED)
+            elif contract_status == "cancelled":
+                query = query.filter(Contract.contract_status == ContractStatus.CANCELLED)
+            elif contract_status == "completed":
+                query = query.filter(Contract.contract_status == ContractStatus.COMPLETED)
+            else:
+                query = query.filter(Contract.contract_status == contract_status)
+        else:
+            # Enum 객체로 전달된 경우 직접 비교
+            query = query.filter(Contract.contract_status == contract_status)
     
     # 전체 개수 조회
     total = query.count()
@@ -62,14 +82,17 @@ def get_contracts(
 def create_contract(db: Session, contract: ContractCreate, creator_username: str) -> Optional[Contract]:
     """새로운 계약 데이터를 생성합니다."""
     # creator_id 조회
-    creator_id = get_profile_by_username(db, creator_username).id
-    if not creator_id:
+    creator_profile = get_profile_by_username(db, creator_username)
+    if not creator_profile:
         return None
+    
+    # 총 가격 미리 계산
+    total_price = sum(item.quantity * item.unit_price for item in contract.items)
     
     # 계약 데이터 생성
     db_contract = Contract(
         title=contract.title,
-        creator_id=creator_id,
+        creator_id=creator_profile.id,
         supplier_contractor_id=contract.supplier_contractor_id,
         supplier_company_id=contract.supplier_company_id,
         receiver_contractor_id=contract.receiver_contractor_id,
@@ -81,13 +104,13 @@ def create_contract(db: Session, contract: ContractCreate, creator_username: str
         payment_due_date=contract.payment_due_date,
         contract_status=contract.contract_status,
         payment_status=contract.payment_status,
-        notes=contract.notes
+        notes=contract.notes,
+        total_price=total_price
     )
     db.add(db_contract)
     db.flush()
     
     # 계약 아이템 생성
-    total_price = 0
     for item in contract.items:
         item_total_price = item.quantity * item.unit_price
         db_item = ContractItem(
@@ -99,10 +122,7 @@ def create_contract(db: Session, contract: ContractCreate, creator_username: str
             total_price=item_total_price
         )
         db.add(db_item)
-        total_price += item_total_price
     
-    # 총 가격 업데이트
-    db_contract.total_price = total_price
     db.commit()
     db.refresh(db_contract)
     
@@ -167,8 +187,8 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
     if not contract:
         return None
     
-    # 관계 데이터 로드
-    db.refresh(contract)
+    # items를 명시적으로 로드
+    items = db.query(ContractItem).filter(ContractItem.contract_id == contract_id).all()
     
     # 응답 데이터 구성
     return ContractResponse(
@@ -199,6 +219,6 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
                 total_price=item.total_price,
                 created_at=item.created_at,
                 updated_at=item.updated_at
-            ) for item in contract.items
+            ) for item in items
         ]
     ) 

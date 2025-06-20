@@ -117,9 +117,7 @@ def list_shipments(
     Returns:
         ShipmentListResponse: 출하 데이터 목록과 총 개수
     """
-    # 사용자의 회사 ID로 필터링
     company_id = current_profile.company_id
-    
     shipments, total = crud.get_shipments(
         db=db,
         skip=skip,
@@ -130,17 +128,16 @@ def list_shipments(
         shipment_status=shipment_status,
         is_supplier=is_supplier
     )
-    
-    # 상세 정보 포함하여 반환
     items = []
     for shipment in shipments:
         detailed_shipment = crud.get_shipment_with_details(db, shipment.id)
         if detailed_shipment:
             items.append(detailed_shipment)
-    
     return {
-        "items": items,
-        "total": total
+        "shipments": items,
+        "total": total,
+        "page": skip // limit + 1 if limit else 1,
+        "size": limit
     }
 
 @router.post("/", response_model=ShipmentResponse, status_code=status.HTTP_201_CREATED)
