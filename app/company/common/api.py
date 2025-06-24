@@ -89,11 +89,16 @@ def update_company(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="회사를 찾을 수 없습니다"
         )
-    if crud.get_company_by_name(db, company_update.name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 존재하는 회사명입니다"
-        )
+    
+    # 이름이 변경되었고, 다른 회사가 같은 이름을 사용하는 경우에만 에러
+    if company_update.name and company_update.name != company.name:
+        existing_company = crud.get_company_by_name(db, company_update.name)
+        if existing_company and existing_company.id != company_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 존재하는 회사명입니다"
+            )
+    
     if company.owner_id != current_profile.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -149,7 +154,12 @@ def add_company_user(
         )
     # 프로필 타입과 회사 타입이 일치하는지 확인
     profile = db.query(Profile).filter(Profile.id == user_add.profile_id).first()
-    if not profile or profile.type.value != company.type.value:
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로필을 찾을 수 없습니다"
+        )
+    if profile.type.value != company.type.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="회사 타입과 사용자 프로필 타입이 일치하지 않습니다"
@@ -157,6 +167,28 @@ def add_company_user(
 
     return crud.add_company_user(db, company_id, user_add.profile_id, user_add.role)
 
+@router.get("/{company_id}/users", response_model=List[ProfileResponse])
+def get_company_users(
+    company_id: UUID,
+    current_profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db)
+):
+    """
+    회사에 속한 사용자 목록을 조회합니다.
+    """
+    company = crud.get_company_by_id(db, company_id)
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="회사를 찾을 수 없습니다"
+        )
+    if company.owner_id != current_profile.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 회사에 대한 사용자 목록 조회 권한이 없습니다"
+        )
+    
+    return crud.get_company_users(db, company_id)
 
 @router.delete("/{company_id}/users/{user_id}", response_model=ProfileResponse)
 def remove_company_user(
@@ -181,7 +213,6 @@ def remove_company_user(
         )
     
     return crud.remove_company_user(db, company_id, user_id)
-
 
 @router.post("/{company_id}/centers", response_model=CenterResponse)
 def add_company_center(

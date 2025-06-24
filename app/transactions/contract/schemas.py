@@ -15,7 +15,8 @@ class ContractItemBase(BaseModel):
     # 없는 것: id, contract_id
 
 class ContractItemCreate(ContractItemBase):
-    contract_id: UUID4
+    # contract_id will be set by backend when creating items
+    pass
 
 class ContractItemResponse(ContractItemBase):
     id: UUID4
@@ -23,6 +24,26 @@ class ContractItemResponse(ContractItemBase):
     updated_at: datetime
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+# 관계 데이터를 위한 스키마들
+class ProfileSummary(BaseModel):
+    id: UUID4
+    username: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    company_name: Optional[str] = None
+
+class CompanySummary(BaseModel):
+    id: UUID4
+    name: str
+    business_number: Optional[str] = None
+    address: Optional[str] = None
+
+class CenterSummary(BaseModel):
+    id: UUID4
+    name: str
+    address: Optional[str] = None
+    region: Optional[str] = None
 
 class ContractBase(BaseModel):
     title: str
@@ -56,7 +77,22 @@ class ContractResponse(ContractBase):
     total_price: float
     creator_id: UUID4
     next_contract_id: Optional[UUID4] = None
-    total_price: float
     items: List[ContractItemResponse]
+    
+    # 관계 데이터 필드들
+    supplier_contractor: Optional[ProfileSummary] = None
+    supplier_company: Optional[CompanySummary] = None
+    receiver_contractor: Optional[ProfileSummary] = None
+    receiver_company: Optional[CompanySummary] = None
+    departure_center: Optional[CenterSummary] = None
+    arrival_center: Optional[CenterSummary] = None
+    creator: Optional[ProfileSummary] = None
 
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
+
+# 상태 업데이트를 위한 스키마들
+class ContractStatusUpdate(BaseModel):
+    contract_status: ContractStatus
+
+class PaymentStatusUpdate(BaseModel):
+    payment_status: PaymentStatus 

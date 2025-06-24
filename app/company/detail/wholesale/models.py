@@ -4,11 +4,13 @@ from sqlalchemy.sql import func
 from app.database.base import Base
 from sqlalchemy.types import DateTime
 from sqlalchemy.orm import relationship
+import uuid
 
 class WholesaleCompanyDetail(Base):
     __tablename__ = "wholesale_company_details"
 
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", use_alter=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", use_alter=True), unique=True, nullable=False)
 
     # 공통 필드
     address = Column(String, nullable=True)

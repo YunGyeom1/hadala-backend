@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from uuid import UUID
 
@@ -45,7 +45,7 @@ def search_profiles(db: Session, username: str, profile_type: ProfileType, skip:
     """
     username의 일부와 일치하는 프로필들을 검색합니다.
     """
-    query = db.query(Profile)
+    query = db.query(Profile).options(joinedload(Profile.company))
     if username:
         query = query.filter(Profile.username.ilike(f"%{username}%"))
     if profile_type:

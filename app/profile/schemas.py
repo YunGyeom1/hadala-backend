@@ -48,6 +48,7 @@ class ProfileResponse(ProfileBase):
     id: UUID
     type: ProfileType
     username: str
+    company_id: Optional[UUID] = None
     company_name: Optional[str] = None
     role: Optional[ProfileRole] = None
 
@@ -63,5 +64,3 @@ class ProfileRoleUpdate(BaseModel):
 class ProfileCompanyUpdate(BaseModel):
     profile_id: UUID
     company_id: UUID
-
-

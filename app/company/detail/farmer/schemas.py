@@ -3,22 +3,22 @@ from typing import Optional
 from datetime import datetime
 
 class FarmerCompanyDetailBase(BaseModel):
-    address: Optional[str] = None
-    region: Optional[str] = None
+    address: Optional[str] = ""
+    region: Optional[str] = ""
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    description: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    representative: Optional[str] = None
-    business_registration_number: Optional[str] = None
+    description: Optional[str] = ""
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    representative: Optional[str] = ""
+    business_registration_number: Optional[str] = ""
     established_year: Optional[int] = None
     
-    main_products: Optional[str] = None
-    farm_size: Optional[float] = None
-    annual_production: Optional[float] = None
-    cultivation_method: Optional[str] = None
-    certification_info: Optional[str] = None
+    main_products: Optional[str] = ""
+    farm_size: Optional[float] = 0.0
+    annual_production: Optional[float] = 0.0
+    cultivation_method: Optional[str] = ""
+    certification_info: Optional[str] = ""
 
 class FarmerCompanyDetailCreate(FarmerCompanyDetailBase):
     pass

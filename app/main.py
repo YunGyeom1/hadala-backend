@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.auth.api import router as auth_router
 from app.company.common.api import router as common_router
 from app.company.center.api import router as center_router
@@ -25,6 +26,15 @@ app.include_router(shipment_router)
 app.include_router(contract_router)
 app.include_router(summary_router)
 app.include_router(profile_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
 def root():

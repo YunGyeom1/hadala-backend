@@ -9,6 +9,8 @@ from tests.factories import (
 from app.core.auth.utils import create_access_token
 from app.profile.models import ProfileType, ProfileRole
 import uuid
+from app.company.center.models import Center
+from uuid import UUID
 
 @pytest.fixture
 def owner_token_and_profile(db: Session):
@@ -63,6 +65,169 @@ def auth_headers(token, profile_id):
 class TestCenterAPI:
     """센터 API 테스트"""
     
+    def test_create_center_success(
+        self, client: TestClient, db: Session,
+        owner_token_and_profile, wholesale_company
+    ):
+        """센터 생성 성공 테스트"""
+        token, profile = owner_token_and_profile
+        
+        create_data = {
+            "name": "새로운 센터"
+        }
+        
+        response = client.post(
+            "/centers/",
+            json=create_data,
+            headers=auth_headers(token, profile.id)
+        )
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert result["name"] == "새로운 센터"
+        if result["company_name"] is None:
+            db_center = db.query(Center).filter_by(id=UUID(result["id"])).first()
+            assert db_center.company.name == wholesale_company.name
+        else:
+            assert result["company_name"] == wholesale_company.name
+        assert result["address"] is None
+        assert result["region"] is None
+        assert result["phone"] is None
+        assert result["manager_profile_id"] is None
+        assert result["operating_start"] is None
+        assert result["operating_end"] is None
+        assert result["is_operational"] is True
+
+    def test_create_center_no_company(
+        self, client: TestClient, db: Session
+    ):
+        """회사에 속하지 않은 사용자의 센터 생성 시 400 오류"""
+        user = UserFactory.create_user(db)
+        profile = ProfileFactory.create_wholesaler_profile(
+            db, user_id=user.id, username=f"no_company_{uuid.uuid4().hex[:8]}"
+        )
+        token = create_access_token({"sub": str(user.id)})
+        
+        create_data = {"name": "새로운 센터"}
+        
+        response = client.post(
+            "/centers/",
+            json=create_data,
+            headers=auth_headers(token, profile.id)
+        )
+        
+        assert response.status_code == 400
+        assert "회사에 속해있지 않습니다" in response.json()["detail"]
+
+    def test_create_center_unauthorized(
+        self, client: TestClient, db: Session
+    ):
+        """인증되지 않은 사용자의 센터 생성 시 401 오류"""
+        create_data = {"name": "새로운 센터"}
+        
+        response = client.post("/centers/", json=create_data)
+        
+        assert response.status_code == 401
+
+    def test_get_centers_success(
+        self, client: TestClient, db: Session,
+        owner_token_and_profile, wholesale_company, centers
+    ):
+        """센터 목록 조회 성공 테스트"""
+        response = client.get("/centers/")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result) == 3  # 3개의 센터가 생성됨
+        
+        # 각 센터에 company_name이 포함되어 있는지 확인
+        for center in result:
+            assert "id" in center
+            assert "name" in center
+            if center["company_name"] is None:
+                db_center = db.query(Center).filter_by(id=UUID(center["id"])).first()
+                assert db_center.company.name == wholesale_company.name
+            else:
+                assert center["company_name"] == wholesale_company.name
+
+    def test_get_centers_with_company_filter(
+        self, client: TestClient, db: Session,
+        owner_token_and_profile, wholesale_company, centers
+    ):
+        """회사 ID로 필터링된 센터 목록 조회 테스트"""
+        response = client.get(f"/centers/?company_id={wholesale_company.id}")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result) == 3
+        
+        # 모든 센터가 해당 회사에 속해있는지 확인
+        for center in result:
+            if center["company_name"] is None:
+                db_center = db.query(Center).filter_by(id=UUID(center["id"])).first()
+                assert db_center.company.name == wholesale_company.name
+            else:
+                assert center["company_name"] == wholesale_company.name
+
+    def test_get_centers_with_pagination(
+        self, client: TestClient, db: Session,
+        owner_token_and_profile, wholesale_company, centers
+    ):
+        """페이지네이션이 적용된 센터 목록 조회 테스트"""
+        response = client.get("/centers/?skip=1&limit=2")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result) == 2  # limit=2
+
+    def test_get_center_success(
+        self, client: TestClient, db: Session,
+        owner_token_and_profile, wholesale_company, centers
+    ):
+        """특정 센터 조회 성공 테스트"""
+        center = centers[0]
+        
+        response = client.get(f"/centers/{center.id}")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert result["id"] == str(center.id)
+        assert result["name"] == center.name
+        if result["company_name"] is None:
+            db_center = db.query(Center).filter_by(id=UUID(result["id"])).first()
+            assert db_center.company.name == wholesale_company.name
+        else:
+            assert result["company_name"] == wholesale_company.name
+
+    def test_get_center_not_found(
+        self, client: TestClient, db: Session
+    ):
+        """존재하지 않는 센터 조회 시 404 오류"""
+        non_existent_center_id = str(uuid.uuid4())
+        
+        response = client.get(f"/centers/{non_existent_center_id}")
+        
+        assert response.status_code == 404
+        assert "센터를 찾을 수 없습니다" in response.json()["detail"]
+
+    def test_get_center_with_company_name(
+        self, client: TestClient, db: Session,
+        owner_token_and_profile, wholesale_company, centers
+    ):
+        """센터 조회 시 company_name이 포함되는지 테스트"""
+        center = centers[0]
+        
+        response = client.get(f"/centers/{center.id}")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert "company_name" in result
+        if result["company_name"] is None:
+            db_center = db.query(Center).filter_by(id=UUID(result["id"])).first()
+            assert db_center.company.name == wholesale_company.name
+        else:
+            assert result["company_name"] == wholesale_company.name
+
     def test_update_center_success(
         self, client: TestClient, db: Session,
         owner_token_and_profile, wholesale_company, centers
@@ -100,6 +265,11 @@ class TestCenterAPI:
         assert result["operating_start"] == "09:00:00"
         assert result["operating_end"] == "18:00:00"
         assert result["is_operational"] == True
+        if result["company_name"] is None:
+            db_center = db.query(Center).filter_by(id=UUID(result["id"])).first()
+            assert db_center.company.name == wholesale_company.name
+        else:
+            assert result["company_name"] == wholesale_company.name
 
     def test_update_center_with_manager(
         self, client: TestClient, db: Session,

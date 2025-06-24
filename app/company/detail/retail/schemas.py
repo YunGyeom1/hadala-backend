@@ -4,20 +4,20 @@ from datetime import datetime, date
 from app.company.common.models import CompanyType
 
 class RetailCompanyDetailBase(BaseModel):
-    address: Optional[str] = None
-    region: Optional[str] = None
+    address: Optional[str] = ""
+    region: Optional[str] = ""
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    description: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    representative: Optional[str] = None
-    business_registration_number: Optional[str] = None
+    description: Optional[str] = ""
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    representative: Optional[str] = ""
+    business_registration_number: Optional[str] = ""
     established_year: Optional[int] = None
     
-    daily_consumption: Optional[float] = None
-    main_products: Optional[str] = None
-    preferred_delivery_day: Optional[str] = None
+    daily_consumption: Optional[float] = 0.0
+    main_products: Optional[str] = ""
+    preferred_delivery_day: Optional[str] = ""
 
 class RetailCompanyDetailCreate(RetailCompanyDetailBase):
     pass

@@ -35,3 +35,8 @@ class Profile(Base):
     user = relationship("User", back_populates="profiles")
     company = relationship("Company", foreign_keys=[company_id])
     owned_companies = relationship("Company", foreign_keys="Company.owner_id", back_populates="owner")
+
+    @property
+    def company_name(self) -> str:
+        """회사명을 반환합니다."""
+        return self.company.name if self.company else None

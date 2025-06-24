@@ -8,11 +8,12 @@ from app.profile.crud import get_profile_by_username
 from app.transactions.contract.models import Contract, ContractItem
 from app.transactions.contract.schemas import (
     ContractCreate, ContractUpdate, ContractResponse,
-    ContractItemCreate, ContractItemResponse
+    ContractItemCreate, ContractItemResponse, ProfileSummary, CompanySummary, CenterSummary
 )
 from app.profile.models import Profile
 from app.company.common.models import Company
-from app.transactions.common.models import ContractStatus
+from app.company.center.models import Center
+from app.transactions.common.models import ContractStatus, PaymentStatus
 
 def get_contract(db: Session, contract_id: UUID) -> Optional[Contract]:
     """특정 계약 데이터를 조회합니다."""
@@ -171,6 +172,36 @@ def update_contract(
     db.refresh(db_contract)
     return db_contract
 
+def update_contract_status(
+    db: Session,
+    contract_id: UUID,
+    contract_status: ContractStatus
+) -> Optional[Contract]:
+    """계약 상태를 업데이트합니다."""
+    db_contract = get_contract(db, contract_id)
+    if not db_contract:
+        return None
+    
+    db_contract.contract_status = contract_status
+    db.commit()
+    db.refresh(db_contract)
+    return db_contract
+
+def update_payment_status(
+    db: Session,
+    contract_id: UUID,
+    payment_status: PaymentStatus
+) -> Optional[Contract]:
+    """결제 상태를 업데이트합니다."""
+    db_contract = get_contract(db, contract_id)
+    if not db_contract:
+        return None
+    
+    db_contract.payment_status = payment_status
+    db.commit()
+    db.refresh(db_contract)
+    return db_contract
+
 def delete_contract(db: Session, contract_id: UUID) -> bool:
     """계약 데이터를 삭제합니다."""
     db_contract = get_contract(db, contract_id)
@@ -189,6 +220,87 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
     
     # items를 명시적으로 로드
     items = db.query(ContractItem).filter(ContractItem.contract_id == contract_id).all()
+    
+    # 관계 데이터 조회
+    supplier_contractor = None
+    if contract.supplier_contractor_id:
+        supplier_contractor_profile = db.query(Profile).filter(Profile.id == contract.supplier_contractor_id).first()
+        if supplier_contractor_profile:
+            supplier_contractor = ProfileSummary(
+                id=supplier_contractor_profile.id,
+                username=supplier_contractor_profile.username,
+                name=supplier_contractor_profile.name,
+                email=supplier_contractor_profile.email,
+                company_name=supplier_contractor_profile.company_name
+            )
+    
+    supplier_company = None
+    if contract.supplier_company_id:
+        supplier_company_obj = db.query(Company).filter(Company.id == contract.supplier_company_id).first()
+        if supplier_company_obj:
+            supplier_company = CompanySummary(
+                id=supplier_company_obj.id,
+                name=supplier_company_obj.name,
+                business_number=None,
+                address=None
+            )
+    
+    receiver_contractor = None
+    if contract.receiver_contractor_id:
+        receiver_contractor_profile = db.query(Profile).filter(Profile.id == contract.receiver_contractor_id).first()
+        if receiver_contractor_profile:
+            receiver_contractor = ProfileSummary(
+                id=receiver_contractor_profile.id,
+                username=receiver_contractor_profile.username,
+                name=receiver_contractor_profile.name,
+                email=receiver_contractor_profile.email,
+                company_name=receiver_contractor_profile.company_name
+            )
+    
+    receiver_company = None
+    if contract.receiver_company_id:
+        receiver_company_obj = db.query(Company).filter(Company.id == contract.receiver_company_id).first()
+        if receiver_company_obj:
+            receiver_company = CompanySummary(
+                id=receiver_company_obj.id,
+                name=receiver_company_obj.name,
+                business_number=None,
+                address=None
+            )
+    
+    departure_center = None
+    if contract.departure_center_id:
+        departure_center_obj = db.query(Center).filter(Center.id == contract.departure_center_id).first()
+        if departure_center_obj:
+            departure_center = CenterSummary(
+                id=departure_center_obj.id,
+                name=departure_center_obj.name,
+                address=departure_center_obj.address,
+                region=departure_center_obj.region
+            )
+    
+    arrival_center = None
+    if contract.arrival_center_id:
+        arrival_center_obj = db.query(Center).filter(Center.id == contract.arrival_center_id).first()
+        if arrival_center_obj:
+            arrival_center = CenterSummary(
+                id=arrival_center_obj.id,
+                name=arrival_center_obj.name,
+                address=arrival_center_obj.address,
+                region=arrival_center_obj.region
+            )
+    
+    creator = None
+    if contract.creator_id:
+        creator_profile = db.query(Profile).filter(Profile.id == contract.creator_id).first()
+        if creator_profile:
+            creator = ProfileSummary(
+                id=creator_profile.id,
+                username=creator_profile.username,
+                name=creator_profile.name,
+                email=creator_profile.email,
+                company_name=creator_profile.company_name
+            )
     
     # 응답 데이터 구성
     return ContractResponse(
@@ -220,5 +332,12 @@ def get_contract_with_details(db: Session, contract_id: UUID) -> Optional[Contra
                 created_at=item.created_at,
                 updated_at=item.updated_at
             ) for item in items
-        ]
+        ],
+        supplier_contractor=supplier_contractor,
+        supplier_company=supplier_company,
+        receiver_contractor=receiver_contractor,
+        receiver_company=receiver_company,
+        departure_center=departure_center,
+        arrival_center=arrival_center,
+        creator=creator
     ) 

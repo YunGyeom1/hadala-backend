@@ -3,8 +3,19 @@ from uuid import UUID
 from . import models, schemas
 from app.profile.crud import get_profile
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from app.transactions.shipment.models import Shipment
+
+def get_centers(db: Session, company_id: Optional[UUID] = None, skip: int = 0, limit: int = 10) -> List[models.Center]:
+    """
+    센터 목록을 조회합니다.
+    """
+    query = db.query(models.Center)
+    
+    if company_id:
+        query = query.filter(models.Center.company_id == company_id)
+    
+    return query.offset(skip).limit(limit).all()
 
 def get_center_by_id(db: Session, center_id: UUID):
     """

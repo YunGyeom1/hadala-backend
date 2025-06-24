@@ -9,7 +9,9 @@ from app.profile.models import Profile, ProfileRole
 from app.profile.dependencies import get_current_profile
 from app.transactions.contract import crud
 from app.transactions.contract.schemas import (
-    ContractCreate, ContractUpdate, ContractResponse
+    ContractCreate, ContractUpdate, ContractResponse,
+    ContractStatus, PaymentStatus,
+    ContractStatusUpdate, PaymentStatusUpdate
 )
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
@@ -219,6 +221,90 @@ def update_contract(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to update contract: {str(e)}"
+        )
+
+@router.patch("/{contract_id}/status", response_model=ContractResponse)
+def update_contract_status(
+    contract_id: UUID,
+    status_update: ContractStatusUpdate,
+    db: Session = Depends(get_db),
+    current_profile: Profile = Depends(get_current_profile)
+):
+    """
+    계약 상태를 업데이트합니다.
+    
+    Args:
+        contract_id: 업데이트할 계약 데이터 ID
+        status_update: 상태 업데이트 데이터
+        db: 데이터베이스 세션
+        current_profile: 현재 사용자 프로필
+    
+    Returns:
+        ContractResponse: 업데이트된 계약 데이터
+    
+    Raises:
+        HTTPException: 권한이 없거나 업데이트에 실패한 경우
+    """
+    check_contract_permission(
+        db, contract_id, current_profile, 
+        expected_roles=[ProfileRole.owner, ProfileRole.manager]
+    )
+    
+    try:
+        db_contract = crud.update_contract_status(db, contract_id, status_update.contract_status)
+        if not db_contract:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Contract not found"
+            )
+        
+        return crud.get_contract_with_details(db, db_contract.id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to update contract status: {str(e)}"
+        )
+
+@router.patch("/{contract_id}/payment-status", response_model=ContractResponse)
+def update_payment_status(
+    contract_id: UUID,
+    status_update: PaymentStatusUpdate,
+    db: Session = Depends(get_db),
+    current_profile: Profile = Depends(get_current_profile)
+):
+    """
+    결제 상태를 업데이트합니다.
+    
+    Args:
+        contract_id: 업데이트할 계약 데이터 ID
+        status_update: 결제 상태 업데이트 데이터
+        db: 데이터베이스 세션
+        current_profile: 현재 사용자 프로필
+    
+    Returns:
+        ContractResponse: 업데이트된 계약 데이터
+    
+    Raises:
+        HTTPException: 권한이 없거나 업데이트에 실패한 경우
+    """
+    check_contract_permission(
+        db, contract_id, current_profile, 
+        expected_roles=[ProfileRole.owner, ProfileRole.manager]
+    )
+    
+    try:
+        db_contract = crud.update_payment_status(db, contract_id, status_update.payment_status)
+        if not db_contract:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Contract not found"
+            )
+        
+        return crud.get_contract_with_details(db, db_contract.id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to update payment status: {str(e)}"
         )
 
 @router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
