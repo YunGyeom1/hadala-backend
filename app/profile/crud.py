@@ -33,7 +33,7 @@ def get_profile(db: Session, profile_id: UUID) -> Optional[Profile]:
     """
     ID로 프로필을 조회합니다.
     """
-    return db.query(Profile).filter(Profile.id == profile_id).first()
+    return db.query(Profile).options(joinedload(Profile.company)).filter(Profile.id == profile_id).first()
 
 def get_profile_by_username(db: Session, username: str) -> Optional[Profile]:
     """

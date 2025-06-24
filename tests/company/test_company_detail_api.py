@@ -268,7 +268,11 @@ def test_create_detail_no_permission(client: TestClient, db: Session, wholesale_
     response = client.post(f"/companies/wholesale/{wholesale_company.id}/detail", json=data, headers=auth_headers(token, other_profile.id))
     assert response.status_code == 403
 
-def test_get_detail_not_found(client: TestClient, db: Session, wholesale_company):
-    response = client.get(f"/companies/wholesale/{wholesale_company.id}/detail")
+def test_get_detail_not_found(client: TestClient, db: Session):
+    # 존재하지 않는 회사 ID 사용
+    non_existent_company_id = uuid.uuid4()
+    
+    response = client.get(f"/companies/wholesale/{non_existent_company_id}/detail")
     assert response.status_code == 404
-    assert "상세 정보를 찾을 수 없습니다" in response.json()["detail"] 
+    # 회사가 존재하지 않으므로 "회사를 찾을 수 없습니다" 메시지가 나와야 함
+    assert "회사를 찾을 수 없습니다" in response.json()["detail"] 

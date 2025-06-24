@@ -66,6 +66,14 @@ def get_wholesale_company_detail(
     """
     도매회사 상세 정보를 조회합니다.
     """
+    # 먼저 회사가 존재하는지 확인
+    company = common_crud.get_company_by_id(db, company_id)
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="회사를 찾을 수 없습니다"
+        )
+    
     detail = crud.get_wholesale_company_detail(db, company_id)
     if not detail:
         # 상세 정보가 없으면 자동으로 생성
@@ -74,11 +82,9 @@ def get_wholesale_company_detail(
             detail = crud.create_wholesale_company_detail(db, company_id, default_detail)
             
             # 회사의 wholesale_company_detail_id 업데이트
-            company = common_crud.get_company_by_id(db, company_id)
-            if company:
-                company.wholesale_company_detail_id = detail.id
-                db.commit()
-                db.refresh(detail)
+            company.wholesale_company_detail_id = detail.id
+            db.commit()
+            db.refresh(detail)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
