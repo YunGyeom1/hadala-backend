@@ -15,7 +15,7 @@ class ShipmentItemBase(BaseModel):
     # 없는 것: id, shipment_id
 
 class ShipmentItemCreate(ShipmentItemBase):
-    shipment_id: UUID4
+    pass  # shipment_id는 서버에서 자동 할당
 
 class ShipmentItemResponse(ShipmentItemBase):
     id: UUID4

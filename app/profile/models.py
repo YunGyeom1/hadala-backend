@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from app.database.base import Base
 import uuid
 import enum
+from typing import Optional
 
 class ProfileType(enum.Enum):
     wholesaler = "wholesaler"
@@ -37,6 +38,6 @@ class Profile(Base):
     owned_companies = relationship("Company", foreign_keys="Company.owner_id", back_populates="owner")
 
     @property
-    def company_name(self) -> str:
+    def company_name(self) -> Optional[str]:
         """회사명을 반환합니다."""
         return self.company.name if self.company else None

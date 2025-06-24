@@ -39,7 +39,7 @@ def get_profile_by_username(db: Session, username: str) -> Optional[Profile]:
     """
     username으로 프로필을 조회합니다.
     """
-    return db.query(Profile).filter(Profile.username == username).first()
+    return db.query(Profile).options(joinedload(Profile.company)).filter(Profile.username == username).first()
 
 def search_profiles(db: Session, username: str, profile_type: ProfileType, skip: int = 0, limit: int = 10) -> List[Profile]:
     """
@@ -56,7 +56,7 @@ def get_my_profiles_by_user_id(db: Session, user_id: UUID) -> List[Profile]:
     """
     사용자 ID로 모든 프로필을 조회합니다.
     """
-    return db.query(Profile).filter(Profile.user_id == user_id).all() 
+    return db.query(Profile).options(joinedload(Profile.company)).filter(Profile.user_id == user_id).all()
 
 def update_my_profile(db: Session, profile_id: UUID, profile_update: MyProfileUpdate) -> Profile :
     """
