@@ -41,6 +41,21 @@ class UpdateDailyInventorySnapshotRequest(BaseModel):
     snapshot_date: date
     centers: List[UpdateCenterInventorySnapshotRequest]
 
+# 초기 센터 상태 정의 스키마
+class InitialCenterInventoryItem(BaseModel):
+    product_name: str
+    quality: ProductQuality
+    quantity: int
+    unit_price: float
+
+class InitialCenterInventoryRequest(BaseModel):
+    center_id: UUID
+    items: List[InitialCenterInventoryItem]
+
+class InitialCompanyInventoryRequest(BaseModel):
+    """회사 전체의 초기 인벤토리 상태 정의"""
+    initial_date: date
+    centers: List[InitialCenterInventoryRequest]
 
 class CompanyInventorySnapshot(BaseModel):
     """회사 전체의 일일 재고 스냅샷"""

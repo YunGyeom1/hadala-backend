@@ -121,9 +121,8 @@ def create_center_summaries_from_results(
     center_groups = defaultdict(list)
     
     for result in results:
-        # 방향에 따라 센터 필드 선택
-        center_field_name = 'departure_center_id' if direction == Direction.OUTBOUND else 'arrival_center_id'
-        center_id = getattr(result, center_field_name)
+        # 센터 이름 사용
+        center_name = result.center_name
         
         center_item = CenterItem(
             product_name=result.product_name,
@@ -131,15 +130,12 @@ def create_center_summaries_from_results(
             quantity=int(result.total_quantity)
         )
         
-        center_groups[center_id].append(center_item)
+        center_groups[center_name].append(center_item)
     
     # CenterSummary 리스트 생성
     center_summaries = []
     
-    for center_id, items in center_groups.items():
-        # 센터 이름 조회 (실제 구현에서는 center 테이블에서 조회)
-        center_name = f"Center {center_id}"  # 임시로 center_id 사용
-        
+    for center_name, items in center_groups.items():
         center_summary = CenterSummary(
             center_name=center_name,
             items=items

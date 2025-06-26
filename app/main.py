@@ -10,6 +10,7 @@ from app.company.detail.farmer.api import router as farmer_router
 from app.transactions.shipment.api import router as shipment_router
 from app.transactions.contract.api import router as contract_router
 from app.transactions.summary.api import router as summary_router
+from app.transactions.payment.api import router as payment_router
 from app.profile.api import router as profile_router
 
 
@@ -25,6 +26,7 @@ app.include_router(center_router)
 app.include_router(shipment_router)
 app.include_router(contract_router)
 app.include_router(summary_router)
+app.include_router(payment_router)
 app.include_router(profile_router)
 
 app.add_middleware(

@@ -13,6 +13,7 @@ from app.transactions.summary.schemas import (
     TransactionType, Direction
 )
 from app.transactions.common.models import ProductQuality, ContractStatus
+from app.company.center.models import Center
 
 def get_contracts_by_date_and_company(
     db: Session,
@@ -28,11 +29,14 @@ def get_contracts_by_date_and_company(
     
     query = db.query(
         center_field,
+        Center.name.label('center_name'),
         ContractItem.product_name,
         ContractItem.quality,
         func.sum(ContractItem.quantity).label('total_quantity')
     ).join(
         ContractItem, Contract.id == ContractItem.contract_id
+    ).join(
+        Center, center_field == Center.id
     ).filter(
         func.date(Contract.delivery_datetime) == target_date
     )
@@ -46,6 +50,7 @@ def get_contracts_by_date_and_company(
     # 센터, 상품, 품질별로 그룹화
     query = query.group_by(
         center_field,
+        Center.name,
         ContractItem.product_name,
         ContractItem.quality
     )
@@ -67,11 +72,14 @@ def get_shipments_by_date_and_company(
     
     query = db.query(
         center_field,
+        Center.name.label('center_name'),
         ShipmentItem.product_name,
         ShipmentItem.quality,
         func.sum(ShipmentItem.quantity).label('total_quantity')
     ).join(
         ShipmentItem, Shipment.id == ShipmentItem.shipment_id
+    ).join(
+        Center, center_field == Center.id
     ).filter(
         func.date(Shipment.shipment_datetime) == target_date
     )
@@ -85,6 +93,7 @@ def get_shipments_by_date_and_company(
     # 센터, 상품, 품질별로 그룹화
     query = query.group_by(
         center_field,
+        Center.name,
         ShipmentItem.product_name,
         ShipmentItem.quality
     )
