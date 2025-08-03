@@ -12,7 +12,7 @@ from app.transactions.contract.api import router as contract_router
 from app.transactions.summary.api import router as summary_router
 from app.transactions.payment.api import router as payment_router
 from app.profile.api import router as profile_router
-
+import os
 
 app = FastAPI()
 
@@ -29,9 +29,21 @@ app.include_router(summary_router)
 app.include_router(payment_router)
 app.include_router(profile_router)
 
+# 배포 환경에 따른 CORS 설정
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://hadala-frontend.vercel.app",  # Vercel 배포 시
+    "https://hadala-frontend.onrender.com",  # Render 배포 시
+]
+
+# 환경 변수에서 추가 origin 가져오기
+if os.getenv("FRONTEND_URL"):
+    allowed_origins.append(os.getenv("FRONTEND_URL"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
