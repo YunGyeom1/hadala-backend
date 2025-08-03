@@ -33,7 +33,7 @@ app.include_router(profile_router)
 allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://hadala-frontend.vercel.app",  # Vercel 배포 시
+    "https://hadala-frontend-production.up.railway.app",  # Vercel 배포 시
     "https://hadala-frontend.onrender.com",  # Render 배포 시
 ]
 
