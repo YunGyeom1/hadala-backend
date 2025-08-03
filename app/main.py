@@ -45,7 +45,11 @@ allowed_origins = [
 if os.getenv("FRONTEND_URL"):
     allowed_origins.append(os.getenv("FRONTEND_URL"))
 
-
+class SetCOOPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response: Response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
+        return response
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,14 +60,11 @@ app.add_middleware(
 )
 
 
-class SetCOOPMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response: Response = await call_next(request)
-        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
-        return response
+
 
 app.add_middleware(SetCOOPMiddleware)
 
 @app.get("/")
 def root():
+    response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
     return {"message": "HADALA API 서버가 실행 중입니다."} 
