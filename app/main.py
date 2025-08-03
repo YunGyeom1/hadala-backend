@@ -64,7 +64,8 @@ app.add_middleware(
 
 app.add_middleware(SetCOOPMiddleware)
 
+
 @app.get("/")
-def root():
+def root(response: Response):
     response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
-    return {"message": "HADALA API 서버가 실행 중입니다."} 
+    return {"message": "HADALA API 서버가 실행 중입니다."}
