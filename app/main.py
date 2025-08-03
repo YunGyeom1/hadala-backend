@@ -17,6 +17,14 @@ import os
 
 app = FastAPI()
 
+class SetCOOPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
+        return response
+
+app.add_middleware(SetCOOPMiddleware)
+
 app.include_router(auth_router)
 app.include_router(common_router)
 app.include_router(wholesale_router)
@@ -43,13 +51,7 @@ allowed_origins = [
 if os.getenv("FRONTEND_URL"):
     allowed_origins.append(os.getenv("FRONTEND_URL"))
 
-class SetCOOPMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"  # 이 부분을 "unsafe-none"으로 변경
-        return response
 
-app.add_middleware(SetCOOPMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
