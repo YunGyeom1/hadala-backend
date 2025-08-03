@@ -34,12 +34,21 @@ allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "https://hadala-frontend-production.up.railway.app",  # Vercel 배포 시
+    
     "https://hadala-frontend.onrender.com",  # Render 배포 시
 ]
 
 # 환경 변수에서 추가 origin 가져오기
 if os.getenv("FRONTEND_URL"):
     allowed_origins.append(os.getenv("FRONTEND_URL"))
+
+class SetCOOPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"  # 이 부분을 "unsafe-none"으로 변경
+        return response
+
+app.add_middleware(SetCOOPMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
