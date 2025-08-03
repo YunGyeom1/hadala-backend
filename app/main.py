@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 from app.core.auth.api import router as auth_router
 from app.company.common.api import router as common_router
 from app.company.center.api import router as center_router
@@ -19,7 +20,7 @@ app = FastAPI()
 
 class SetCOOPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        response = await call_next(request)
+        response: Response = await call_next(request)
         response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
         return response
 
