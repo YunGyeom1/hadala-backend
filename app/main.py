@@ -18,13 +18,6 @@ import os
 
 app = FastAPI()
 
-class SetCOOPMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response: Response = await call_next(request)
-        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
-        return response
-
-app.add_middleware(SetCOOPMiddleware)
 
 app.include_router(auth_router)
 app.include_router(common_router)
@@ -62,6 +55,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class SetCOOPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response: Response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
+        return response
+
+app.add_middleware(SetCOOPMiddleware)
 
 @app.get("/")
 def root():
