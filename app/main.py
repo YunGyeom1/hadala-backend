@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.auth.api import router as auth_router
 from app.company.common.api import router as common_router
 from app.company.center.api import router as center_router
