@@ -35,12 +35,7 @@ app.include_router(profile_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://hadala-frontend-production.up.railway.app",
-        # ... (다른 origin들) ...
-    ],
-    allow_credentials=True,
+    allow_origins=["*"], 
     allow_methods=["*"],
     allow_headers=["*"],
 )
