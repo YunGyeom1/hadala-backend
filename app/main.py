@@ -14,7 +14,7 @@ from app.transactions.contract.api import router as contract_router
 from app.transactions.summary.api import router as summary_router
 from app.transactions.payment.api import router as payment_router
 from app.profile.api import router as profile_router
-import os
+from app.core.config import settings
 
 app = FastAPI()
 
@@ -42,8 +42,8 @@ allowed_origins = [
 ]
 
 # 환경 변수에서 추가 origin 가져오기
-if os.getenv("FRONTEND_URL"):
-    allowed_origins.append(os.getenv("FRONTEND_URL"))
+if settings.FRONTEND_URL:
+    allowed_origins.append(settings.FRONTEND_URL)
 
 class SetCOOPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):

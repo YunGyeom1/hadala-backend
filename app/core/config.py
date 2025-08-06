@@ -23,10 +23,14 @@ class Settings(BaseSettings):
     # 배포 환경 설정
     ENVIRONMENT: str = "development"
     
+    # 프론트엔드 URL (CORS용)
+    FRONTEND_URL: Optional[str] = None
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=True
+        case_sensitive=True,
+        extra="ignore"  # 추가 환경 변수 허용
     )
 
 settings = Settings()
