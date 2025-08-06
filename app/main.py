@@ -32,40 +32,29 @@ app.include_router(summary_router)
 app.include_router(payment_router)
 app.include_router(profile_router)
 
-# 배포 환경에 따른 CORS 설정
-allowed_origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://hadala-frontend-production.up.railway.app",  # Railway 배포 시
-    "https://hadala-frontend.onrender.com",  # Render 배포 시
-    "https://hadala-frontend.vercel.app",  # Vercel 배포 시
-]
 
-# 환경 변수에서 추가 origin 가져오기
-if settings.FRONTEND_URL:
-    allowed_origins.append(settings.FRONTEND_URL)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "https://hadala-frontend-production.up.railway.app",
+        # ... (다른 origin들) ...
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+# COOP 미들웨어를 추가합니다.
 class SetCOOPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response: Response = await call_next(request)
         response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
         return response
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-
-
 app.add_middleware(SetCOOPMiddleware)
 
 
 @app.get("/")
-def root(response: Response):
-    response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
+def root():
     return {"message": "HADALA API 서버가 실행 중입니다."}
