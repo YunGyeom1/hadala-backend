@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -8,6 +9,17 @@ from alembic import context
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Railway 환경에서 데이터베이스 URL 설정
+def get_database_url():
+    # Railway 환경에서는 DATABASE_URL 환경 변수 사용
+    if os.getenv("DATABASE_URL"):
+        return os.getenv("DATABASE_URL")
+    # 로컬 개발 환경에서는 기본값 사용
+    return "postgresql+psycopg2://postgres:longtime@localhost:5432/hadala"
+
+# 데이터베이스 URL을 설정에 추가
+config.set_main_option("sqlalchemy.url", get_database_url())
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
